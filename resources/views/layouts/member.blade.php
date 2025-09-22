@@ -31,6 +31,8 @@
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}" id="main-style-link" />
     <link rel="stylesheet" href="{{ asset('assets/css/style-preset.css') }}" />
 
+    @yield('style')
+
 </head>
 <!-- [Head] end -->
 <!-- [Body] Start -->
@@ -89,7 +91,7 @@
                         </a>
                     </li> --}}
                     <li class="pc-item">
-                        <a href="#" class="pc-link">
+                        <a href="{{ route('logout.member') }}" class="pc-link">
                             <span class="pc-micon"><i class="ph ph-power"></i></span>
                             <span class="pc-mtext">Logout</span>
                         </a>
@@ -124,8 +126,8 @@
                             <i class="ph ph-list"></i>
                         </a>
                     </li>
-                    {{-- <li class="dropdown pc-h-item">
-                        <a class="pc-head-link dropdown-toggle arrow-none m-0" data-bs-toggle="dropdown" href="#"
+                    <li class="dropdown pc-h-item">
+                        {{-- <a class="pc-head-link dropdown-toggle arrow-none m-0" data-bs-toggle="dropdown" href="#"
                             role="button" aria-haspopup="false" aria-expanded="false">
                             <i class="ph ph-magnifying-glass"></i>
                         </a>
@@ -137,8 +139,9 @@
                                     <button class="btn btn-light-secondary btn-search">Search</button>
                                 </div>
                             </form>
-                        </div>
-                    </li> --}}
+                        </div> --}}
+                        {{ session('Name_Member') }}
+                    </li>
                 </ul>
             </div>
 
@@ -175,6 +178,8 @@
     <script src="{{ asset('assets/js/script.js') }}"></script>
     <script src="{{ asset('assets/js/theme.js') }}"></script>
     <script src="{{ asset('assets/js/plugins/feather.min.js') }}"></script>
+
+    @yield('script')
 
 
     <script>
