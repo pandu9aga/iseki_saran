@@ -13,7 +13,7 @@
         <div class="modal fade" id="addSuggestionModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" role="document">
                 <div class="modal-content">
-                    <form action="#" method="POST" style="display:inline;" enctype="multipart/form-data">
+                    <form action="{{ route('suggestion.store') }}" method="POST" style="display:inline;" enctype="multipart/form-data">
                         @csrf
                         <div class="modal-header bg-primary">
                             <h5 class="modal-title text-white" id="addSuggestionModalLabel">Saran Perbaikan</h5>
@@ -30,19 +30,23 @@
                             <div class="row">
                                 <div class="col mb-1">
                                     <label for="Team_Suggestion" class="form-label">Team</label>
-                                    <input type="text" id="Team_Suggestion" name="Team_Suggestion" class="form-control" />
+                                    <select id="Team_Suggestion" name="Team_Suggestion" class="form-control">
+                                        <option value="Assembling">Assembling</option>
+                                        <option value="Painting">Painting</option>
+                                        <option value="DST">DST</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col mb-1">
                                     <label for="Theme_Suggestion" class="form-label">Tema Perbaikan</label>
                                     <select id="Theme_Suggestion" name="Theme_Suggestion" class="form-control">
-                                        <option value="5S">Keselamatan</option>
-                                        <option value="Kaizen">Kualitas</option>
-                                        <option value="Safety">Cost</option>
-                                        <option value="Quality">Waktu</option>
-                                        <option value="Cost">Lingkungan</option>
-                                        <option value="Delivery">Moral</option>
+                                        <option value="Keselamatan">Keselamatan</option>
+                                        <option value="Kualitas">Kualitas</option>
+                                        <option value="Cost">Cost</option>
+                                        <option value="Waktu">Waktu</option>
+                                        <option value="Lingkungan">Lingkungan</option>
+                                        <option value="Moral">Moral</option>
                                     </select>
                                 </div>
                             </div>
@@ -83,6 +87,7 @@
                             <th class="text-primary">Skor B</th>
                             <th class="text-primary">Komentar</th>
                             <th class="text-primary">Leader</th>
+                            <th class="text-primary">No Penerimaan</th>
                             <th class="text-primary">Action</th>
                         </tr>
                     </thead>
@@ -119,6 +124,9 @@ $(document).ready(function () {
         order: [[1, 'asc']],
         ajax: {
             url: '{{ route("suggestions.data") }}',
+            data: function (d) {
+                d.Id_Member = '{{ session('Id_Member') }}'; // inject dari Blade
+            },
             type: 'GET',
             error: function (xhr, error, code) {
                 console.warn("DataTables AJAX Error:", error, code);
@@ -135,7 +143,7 @@ $(document).ready(function () {
         fixedHeader: false,
         columns: [
             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-            { data: 'Id_Member', name: 'Id_Member' },
+            { data: 'member_nama', name: 'employees.nama' },
             { data: 'Team_Suggestion', name: 'Team_Suggestion' },
             { data: 'Theme_Suggestion', name: 'Theme_Suggestion' },
             { data: 'Date_First_Suggestion', name: 'Date_First_Suggestion' },
@@ -149,6 +157,7 @@ $(document).ready(function () {
             { data: 'Score_B_Suggestion', name: 'Score_B_Suggestion' },
             { data: 'Comment_Suggestion', name: 'Comment_Suggestion' },
             { data: 'Id_User', name: 'Id_User' },
+            { data: 'Acceptance_Suggestion', name: 'Acceptance_Suggestion' },
             { data: 'action', name: 'action', orderable: false, searchable: false },
         ],
         initComplete: function () {
@@ -183,10 +192,9 @@ $(document).ready(function () {
 
         if (confirm("Hapus saran: " + content + "?")) {
             $.ajax({
-                url: '/iseki_saran/public/suggestions/' + id,
-                type: 'POST',
+                url: '{{ url("suggestion/delete") }}/' + id,
+                type: 'DELETE',
                 data: {
-                    _method: 'DELETE',
                     _token: '{{ csrf_token() }}'
                 },
                 success: function(res) {

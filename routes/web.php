@@ -23,11 +23,8 @@ Route::middleware(LeaderMiddleware::class)->group(function () {
 Route::middleware(MemberMiddleware::class)->group(function () {
     Route::get('/home', [MemberController::class, 'index'])->name('home');
 
-    Route::get('/suggestion', [SuggestionController::class, 'index'])->name('suggestion');
-    Route::get('/suggestion/add', [SuggestionController::class, 'add'])->name('suggestion.add');
-    Route::post('/suggestion/create', [SuggestionController::class, 'create'])->name('suggestion.create');
-    Route::get('/suggestion/edit/{Id_Suggestion}', [SuggestionController::class, 'edit'])->name('suggestion.edit');
-    Route::put('/suggestion/update/{Id_Suggestion}', [SuggestionController::class, 'update'])->name('suggestion.update');
+    Route::post('/suggestion', [SuggestionController::class, 'store'])->name('suggestion.store');
+    Route::get('/suggestion/{id}', [SuggestionController::class, 'show'])->name('suggestion.show');
+    Route::post('/suggestion/{id}/update-field', [SuggestionController::class, 'updateField'])->name('suggestion.updateField');
     Route::delete('/suggestion/delete/{Id_Suggestion}', [SuggestionController::class, 'destroy'])->name('suggestion.destroy');
-    Route::post('/suggestion/import', [SuggestionController::class, 'import'])->name('suggestion.import');
 });

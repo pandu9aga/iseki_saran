@@ -51,7 +51,7 @@
     <nav class="pc-sidebar">
         <div class="navbar-wrapper">
             <div class="m-header">
-                <a href="{{ url('dashboard') }}" class="b-brand text-primary">
+                <a href="{{ url('/') }}" class="b-brand text-primary">
                     {{-- <img src="{{ asset('assets/images/logo-white.svg') }}" alt="logo image" class="logo-lg" /> --}}
                     <h5 class="mb-0 text-primary">Saran Perbaikan</h5>
                 </a>
@@ -62,7 +62,7 @@
                         <label>Menu</label>
                     </li>
                     <li class="pc-item {{ $page === 'home' ? 'active' : '' }}">
-                        <a href="#" class="pc-link">
+                        <a href="{{ url('/') }}" class="pc-link">
                             <span class="pc-micon"><i class="ph ph-gauge"></i></span>
                             <span class="pc-mtext">Home</span>
                         </a>
@@ -106,7 +106,7 @@
     <!-- [ Header Topbar ] start -->
     <header class="pc-header">
         <div class="m-header">
-            <a href="{{ asset('dashboard/index.html') }}" class="b-brand text-white">
+            <a href="{{ asset('/') }}" class="b-brand text-white">
                 <!-- ========   Change your logo from here   ============ -->
                 {{-- <img src="{{ asset('assets/images/logo-white.svg') }}" alt="logo image" class="logo-lg" /> --}}
                 <h5 class="mb-0 text-white">Saran Perbaikan</h5>
@@ -140,7 +140,7 @@
                                 </div>
                             </form>
                         </div> --}}
-                        {{ session('Name_Member') }}
+                        {{ $member->nama }}
                     </li>
                 </ul>
             </div>
