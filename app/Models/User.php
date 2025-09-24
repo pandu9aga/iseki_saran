@@ -18,11 +18,6 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-    ];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -51,4 +46,10 @@ class User extends Authenticatable
     protected $primaryKey = 'Id_User'; // Nama primary key
 
     public $timestamps = false; // Jika tabel tidak memiliki created_at dan updated_at
+
+    protected $fillable = [
+        'Username_User',
+        'Name_User',
+        'Password_User'
+    ];
 }

@@ -150,14 +150,77 @@ $(document).ready(function () {
             { data: 'Date_First_Suggestion', name: 'Date_First_Suggestion' },
             { data: 'Date_Last_Suggestion', name: 'Date_Last_Suggestion' },
             { data: 'Status_Suggestion', name: 'Status_Suggestion' },
-            { data: 'Content_Suggestion', name: 'Content_Suggestion' },
-            { data: 'Content_Photos_Suggestion', name: 'Content_Photos_Suggestion' },
-            { data: 'Improvement_Suggestion', name: 'Improvement_Suggestion' },
-            { data: 'Improvement_Photos_Suggestion', name: 'Improvement_Photos_Suggestion' },
+            { 
+                data: 'Content_Suggestion', 
+                name: 'Content_Suggestion',
+                render: function(data, type, row) {
+                    if (!data) return '';
+                    return data.length > 20 ? data.substr(0, 20) + '...' : data;
+                }
+            },
+            {
+                data: 'Content_Photos_Suggestion',
+                name: 'Content_Photos_Suggestion',
+                render: function (data, type, row) {
+                    if (data) {
+                        try {
+                            // Decode dari HTML entities ke string biasa
+                            let decoded = data.replace(/&quot;/g, '"');
+                            let files = JSON.parse(decoded);
+
+                            return files.map(file =>
+                                '<img src="/iseki_saran/public/uploads/contents/' + file + '" ' +
+                                'class="img-thumbnail m-1" style="max-width:60px; max-height:60px;"/>'
+                            ).join('');
+                        } catch (e) {
+                            console.error("Invalid JSON after decode:", data, e);
+                            return '';
+                        }
+                    }
+                    return '';
+                }
+            },
+            { 
+                data: 'Improvement_Suggestion', 
+                name: 'Improvement_Suggestion',
+                render: function(data, type, row) {
+                    if (!data) return '';
+                    return data.length > 20 ? data.substr(0, 20) + '...' : data;
+                }
+            },
+            {
+                data: 'Improvement_Photos_Suggestion',
+                name: 'Improvement_Photos_Suggestion',
+                render: function (data, type, row) {
+                    if (data) {
+                        try {
+                            // Decode dari HTML entities ke string biasa
+                            let decoded = data.replace(/&quot;/g, '"');
+                            let files = JSON.parse(decoded);
+
+                            return files.map(file =>
+                                '<img src="/iseki_saran/public/uploads/improvements/' + file + '" ' +
+                                'class="img-thumbnail m-1" style="max-width:60px; max-height:60px;"/>'
+                            ).join('');
+                        } catch (e) {
+                            console.error("Invalid JSON after decode:", data, e);
+                            return '';
+                        }
+                    }
+                    return '';
+                }
+            },
             { data: 'Score_A_Suggestion', name: 'Score_A_Suggestion' },
             { data: 'Score_B_Suggestion', name: 'Score_B_Suggestion' },
-            { data: 'Comment_Suggestion', name: 'Comment_Suggestion' },
-            { data: 'Id_User', name: 'Id_User' },
+            { 
+                data: 'Comment_Suggestion', 
+                name: 'Comment_Suggestion',
+                render: function(data, type, row) {
+                    if (!data) return '';
+                    return data.length > 20 ? data.substr(0, 20) + '...' : data;
+                }
+            },
+            { data: 'user_name', name: 'users.Name_User' },
             { data: 'Acceptance_First_Suggestion', name: 'Acceptance_First_Suggestion' },
             { data: 'Acceptance_Last_Suggestion', name: 'Acceptance_Last_Suggestion' },
             { data: 'action', name: 'action', orderable: false, searchable: false },
@@ -169,16 +232,80 @@ $(document).ready(function () {
                 var cell = $('.filters th').eq($(api.column(colIdx).header()).index());
                 var title = $(cell).text();
 
-                if (title !== "No" && title !== "Action") {
-                    $(cell).html(
-                        '<input type="text" placeholder="Search ' + title + '" ' +
-                        'class="form-control form-control-sm" style="width:100%; padding:2px 4px; font-size:12px;"/>'
-                    );
+                if (title !== "No" && title !== "Action" && title !== "Foto Permasalahan" && title !== "Foto Perbaikan") {
+                    if (title === "Tanggal Penyerahan Awal" || title === "Tanggal Penyerahan Akhir") {
+                        // Input khusus date
+                        $(cell).html(
+                            '<input type="date" class="form-control form-control-sm" ' +
+                            'style="width:100%; padding:2px 4px; font-size:12px;"/>'
+                        );
+                    } else if (title === "Status") {
+                        // Select khusus status
+                        $(cell).html(
+                            '<select class="form-control form-control-sm" style="width:100%; font-size:12px;">' +
+                            '<option value="">Semua</option>' +
+                            '<option value="1">Sudah Selesai</option>' +
+                            '<option value="0">Belum Selesai</option>' +
+                            '</select>'
+                        );
+                    } else if (title === "Team") {
+                        // Select khusus status
+                        $(cell).html(
+                            '<select class="form-control form-control-sm" style="width:100%; font-size:12px;">' +
+                            '<option value="">Semua</option>' +
+                            '<option value="Assembling">Assembling</option>' +
+                            '<option value="Painting">Painting</option>' +
+                            '<option value="DST">DST</option>' +
+                            '</select>'
+                        );
+                    } else if (title === "Tema") {
+                        // Select khusus status
+                        $(cell).html(
+                            '<select class="form-control form-control-sm" style="width:100%; font-size:12px;">' +
+                            '<option value="">Semua</option>' +
+                            '<option value="Keselamatan">Keselamatan</option>' +
+                            '<option value="Kualitas">Kualitas</option>' +
+                            '<option value="Cost">Cost</option>' +
+                            '<option value="Waktu">Waktu</option>' +
+                            '<option value="Lingkungan">Lingkungan</option>' +
+                            '<option value="Moral">Moral</option>' +
+                            '</select>'
+                        );
+                    } else if (title === "Skor A") {
+                        // Select khusus status
+                        $(cell).html(
+                            '<select class="form-control form-control-sm" style="width:100%; font-size:12px;">' +
+                            '<option value="">Semua</option>' +
+                            '<option value="1">1 = Rp 600 rb/tahun</option>' +
+                            '<option value="2">2 = Rp 1200 rb/tahun</option>' +
+                            '<option value="3">3 = Rp 3600 rb/tahun</option>' +
+                            '<option value="4">4 = Rp 9000 rb/tahun</option>' +
+                            '<option value="5">5 = Rp 15000 rb/tahun</option>' +
+                            '<option value="6">6 = Rp 21000 rb/tahun</option>' +
+                            '<option value="7">7 = Rp 30000 rb/tahun</option>' +
+                            '<option value="8">8 = Rp 39000 rb/tahun</option>' +
+                            '<option value="9">9 = Rp 48000 rb/tahun</option>' +
+                            '<option value="10">10 = Rp 60000 rb/tahun</option>' +
+                            '<option value="11">11 = Rp 72000 rb/tahun</option>' +
+                            '<option value="12">12 = Rp 84000 rb/tahun</option>' +
+                            '<option value="13">13 = Rp 96000 rb/tahun</option>' +
+                            '<option value="14">14 = Rp 105000 rb/tahun</option>' +
+                            '<option value="15">15 = Rp 129000 rb/tahun</option>' +
+                            '</select>'
+                        );
+                    } else {
+                        // Input text biasa
+                        $(cell).html(
+                            '<input type="text" placeholder="Search ' + title + '" ' +
+                            'class="form-control form-control-sm" style="width:100%; padding:2px 4px; font-size:12px;"/>'
+                        );
+                    }
                 } else {
                     $(cell).html('');
                 }
 
-                $('input', cell).off().on('keyup change clear', function () {
+                // Event search
+                $('input, select', cell).off().on('keyup change clear', function () {
                     if (api.column(colIdx).search() !== this.value) {
                         api.column(colIdx).search(this.value).draw();
                     }

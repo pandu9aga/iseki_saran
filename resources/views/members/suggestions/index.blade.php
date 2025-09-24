@@ -46,7 +46,7 @@
 						<tr>
 							<th class="col-2">Status</th>
 							@if ($suggestion->Status_Suggestion == 1)
-								<td><span class="badge bg-success">Selesai</span></td>
+								<td><span class="badge bg-success">Sudah Selesai</span></td>
 							@endif
 							@if ($suggestion->Status_Suggestion == 0)
 								<td><span class="badge bg-warning text-dark">Belum Selesai</span></td>
@@ -184,6 +184,59 @@
 									<i class="material-icons-two-tone" style="font-size:16px;">edit</i>
 								</button>
 							</td>
+						</tr>
+						
+						{{-- Skor A --}}
+						<tr>
+							<th class="col-2">Skor A</th>
+							<td id="value-Score_A_Suggestion">{{ $suggestion->score_a_formatted }}</td>
+							<td class="col-1 text-center"></td>
+						</tr>
+
+						{{-- Skor B --}}
+						<tr>
+							<th class="col-2">Skor B</th>
+							<td id="value-Score_B_Suggestion">
+								@if($suggestion->score_b_formatted)
+									<table class="table table-bordered table-sm">
+										<tbody>
+											@foreach($suggestion->score_b_formatted as $label => $val)
+												<tr class="mb-0">
+													<td class="col-2">
+														@if($label === 'Total')
+															<strong>{{ $label }}</strong>
+														@else
+															{{ $label }}
+														@endif
+													</td>
+													<td>
+														@if($label === 'Total')
+															<strong>{{ $val }}</strong>
+														@else
+															{{ $val }}
+														@endif
+													</td>
+												</tr>
+											@endforeach
+										</tbody>
+									</table>
+								@endif
+							</td>
+							<td class="col-1 text-center"></td>
+						</tr>
+
+						{{-- Leader --}}
+						<tr>
+							<th class="col-2">Leader</th>
+							<td id="value-Id_User">{{ $suggestion->user->Name_User ?? '' }}</td>
+							<td class="col-1 text-center"></td>
+						</tr>
+
+						{{-- Komentar --}}
+						<tr>
+							<th class="col-2">Komentar</th>
+							<td id="value-Comment_Suggestion">{{ $suggestion->Comment_Suggestion }}</td>
+							<td class="col-1 text-center"></td>
 						</tr>
 
 					</tbody>

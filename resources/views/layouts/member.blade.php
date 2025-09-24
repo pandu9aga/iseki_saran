@@ -37,7 +37,7 @@
 <!-- [Head] end -->
 <!-- [Body] Start -->
 
-<body data-pc-header="header-2" data-pc-preset="preset-4" data-pc-sidebar-theme="light" data-pc-sidebar-caption="true"
+<body data-pc-header="header-6" data-pc-preset="preset-4" data-pc-sidebar-theme="light" data-pc-sidebar-caption="true"
     data-pc-direction="ltr" data-pc-theme="light">
     <!-- [ Pre-loader ] start -->
     <div class="loader-bg">

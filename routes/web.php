@@ -4,7 +4,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\LeaderMiddleware;
 use App\Http\Middleware\MemberMiddleware;
 use App\Http\Controllers\MainController;
-use App\Http\Controllers\Member\LeaderController;
+use App\Http\Controllers\Leader\LeaderController;
+use App\Http\Controllers\Leader\LeaderSuggestionController;
+use App\Http\Controllers\Leader\UserController;
 use App\Http\Controllers\Member\MemberController;
 use App\Http\Controllers\Member\SuggestionController;
 
@@ -18,6 +20,16 @@ Route::get('/logout_member', [MainController::class, 'logout_member'])->name('lo
 
 Route::middleware(LeaderMiddleware::class)->group(function () {
     Route::get('/dashboard', [LeaderController::class, 'index'])->name('dashboard');
+
+    Route::get('/user', [UserController::class, 'index'])->name('leader.users.index');
+    Route::post('/user/store', [UserController::class, 'store'])->name('leader.users.store');
+    Route::put('/user/update/{id}', [UserController::class, 'update'])->name('leader.users.update');
+    Route::delete('/user/delete/{id}', [UserController::class, 'destroy'])->name('leader.users.destroy');
+
+    Route::get('/leader/suggestion', [LeaderSuggestionController::class, 'index'])->name('leader.suggestion');
+    Route::get('/leader/suggestion/{id}', [LeaderSuggestionController::class, 'show'])->name('leader.suggestion.show');
+    Route::post('/leader/suggestion/{id}/update-field', [LeaderSuggestionController::class, 'updateField'])->name('leader.suggestion.updateField');
+    Route::delete('/leader/suggestion/delete/{Id_Suggestion}', [LeaderSuggestionController::class, 'destroy'])->name('leader.suggestion.destroy');
 });
 
 Route::middleware(MemberMiddleware::class)->group(function () {

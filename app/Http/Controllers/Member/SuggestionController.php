@@ -37,8 +37,10 @@ class SuggestionController extends Controller
                 'suggestions.Acceptance_First_Suggestion',
                 'suggestions.Acceptance_Last_Suggestion',
                 $rifaDb.'.employees.nama as member_nama',
+                'users.Name_User as user_name',
             ])
             ->leftJoin($rifaDb.'.employees', $rifaDb.'.employees.id', '=', 'suggestions.Id_Member')
+            ->leftJoin('users', 'users.Id_User', '=', 'suggestions.Id_User')
             ->where('suggestions.Id_Member', $Id_Member);
 
         return DataTables::of($query)
@@ -48,6 +50,58 @@ class SuggestionController extends Controller
                     return '<span class="badge bg-success">Sudah Selesai</span>';
                 }
                 return '<span class="badge bg-warning text-dark">Belum Selesai</span>';
+            })
+            ->editColumn('Score_A_Suggestion', function ($row) {
+                if ($row->Score_A_Suggestion === null) {
+                    return '';
+                }
+
+                $map = [
+                    0 => 0,
+                    1 => 600,
+                    2 => 1200,
+                    3 => 3600,
+                    4 => 9000,
+                    5 => 15000,
+                    6 => 21000,
+                    7 => 30000,
+                    8 => 39000,
+                    9 => 48000,
+                    10 => 60000,
+                    11 => 72000,
+                    12 => 84000,
+                    13 => 96000,
+                    14 => 105000,
+                    15 => 129000,
+                ];
+
+                $val = $row->Score_A_Suggestion;
+                $converted = $map[$val] ?? 0;
+
+                return "{$val} = Rp " . number_format($converted, 0, ',', '.') . " rb/tahun";
+            })
+            ->editColumn('Score_B_Suggestion', function ($row) {
+                if (!$row->Score_B_Suggestion) {
+                    return '';
+                }
+
+                $scores = json_decode($row->Score_B_Suggestion, true);
+                if (!is_array($scores)) {
+                    return '';
+                }
+
+                $parts = [];
+                if (isset($scores['kreatifitas'])) {
+                    $parts[] = 'Kreatifitas: ' . $scores['kreatifitas'];
+                }
+                if (isset($scores['ide'])) {
+                    $parts[] = 'Ide: ' . $scores['ide'];
+                }
+                if (isset($scores['usaha'])) {
+                    $parts[] = 'Usaha: ' . $scores['usaha'];
+                }
+
+                return implode(', ', $parts);
             })
             ->editColumn('Acceptance_First_Suggestion', function ($row) {
                 return $row->Acceptance_First_Suggestion !== null
@@ -71,7 +125,14 @@ class SuggestionController extends Controller
                     </button>
                 ';
             })
-            ->rawColumns(['Status_Suggestion','action'])
+            ->rawColumns([
+                'Status_Suggestion',
+                'Score_A_Suggestion',
+                'Score_B_Suggestion',
+                'Acceptance_First_Suggestion',
+                'Acceptance_Last_Suggestion',
+                'action'
+                ])
             ->make(true);
     }
 
@@ -195,8 +256,40 @@ class SuggestionController extends Controller
     public function destroy($Id_Suggestion)
     {
         $suggestion = Suggestion::findOrFail($Id_Suggestion);
+
+        // Hapus foto permasalahan (Content_Photos_Suggestion)
+        if (!empty($suggestion->Content_Photos_Suggestion)) {
+            $contentPhotos = json_decode($suggestion->Content_Photos_Suggestion, true);
+            if (is_array($contentPhotos)) {
+                foreach ($contentPhotos as $photo) {
+                    $path = public_path('uploads/contents/' . $photo);
+                    if ($photo && file_exists($path)) {
+                        @unlink($path);
+                    }
+                }
+            }
+        }
+
+        // Hapus foto perbaikan (Improvement_Photos_Suggestion)
+        if (!empty($suggestion->Improvement_Photos_Suggestion)) {
+            $improvementPhotos = json_decode($suggestion->Improvement_Photos_Suggestion, true);
+            if (is_array($improvementPhotos)) {
+                foreach ($improvementPhotos as $photo) {
+                    $path = public_path('uploads/improvements/' . $photo);
+                    if ($photo && file_exists($path)) {
+                        @unlink($path);
+                    }
+                }
+            }
+        }
+
+        // Hapus record dari database
         $suggestion->delete();
-        
-        return response()->json(['success' => true, 'message' => 'Data delete successfully']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data deleted successfully'
+        ]);
     }
+
 }
