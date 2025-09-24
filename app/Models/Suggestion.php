@@ -29,7 +29,8 @@ class Suggestion extends Model
         'Score_B_Suggestion',
         'Comment_Suggestion',
         'Id_User',
-        'Acceptance_Suggestion'
+        'Acceptance_First_Suggestion',
+        'Acceptance_Last_Suggestion'
     ];
 
     public function member()
@@ -40,6 +41,20 @@ class Suggestion extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'Id_User', 'Id_User');
+    }
+
+    public function getAcceptanceFirstSuggestionFormattedAttribute()
+    {
+        return $this->Acceptance_First_Suggestion !== null
+            ? str_pad($this->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT)
+            : null; // atau '' kalau mau kosong
+    }
+
+    public function getAcceptanceLastSuggestionFormattedAttribute()
+    {
+        return $this->Acceptance_Last_Suggestion !== null
+            ? str_pad($this->Acceptance_Last_Suggestion, 5, '0', STR_PAD_LEFT)
+            : null; // atau '' kalau mau kosong
     }
 
 }

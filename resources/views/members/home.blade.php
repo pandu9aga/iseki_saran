@@ -87,7 +87,8 @@
                             <th class="text-primary">Skor B</th>
                             <th class="text-primary">Komentar</th>
                             <th class="text-primary">Leader</th>
-                            <th class="text-primary">No Penerimaan</th>
+                            <th class="text-primary">No Penerimaan Awal</th>
+                            <th class="text-primary">No Penerimaan Akhir</th>
                             <th class="text-primary">Action</th>
                         </tr>
                     </thead>
@@ -157,7 +158,8 @@ $(document).ready(function () {
             { data: 'Score_B_Suggestion', name: 'Score_B_Suggestion' },
             { data: 'Comment_Suggestion', name: 'Comment_Suggestion' },
             { data: 'Id_User', name: 'Id_User' },
-            { data: 'Acceptance_Suggestion', name: 'Acceptance_Suggestion' },
+            { data: 'Acceptance_First_Suggestion', name: 'Acceptance_First_Suggestion' },
+            { data: 'Acceptance_Last_Suggestion', name: 'Acceptance_Last_Suggestion' },
             { data: 'action', name: 'action', orderable: false, searchable: false },
         ],
         initComplete: function () {

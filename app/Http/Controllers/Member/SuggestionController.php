@@ -34,7 +34,8 @@ class SuggestionController extends Controller
                 'suggestions.Score_B_Suggestion',
                 'suggestions.Comment_Suggestion',
                 'suggestions.Id_User',
-                'suggestions.Acceptance_Suggestion',
+                'suggestions.Acceptance_First_Suggestion',
+                'suggestions.Acceptance_Last_Suggestion',
                 $rifaDb.'.employees.nama as member_nama',
             ])
             ->leftJoin($rifaDb.'.employees', $rifaDb.'.employees.id', '=', 'suggestions.Id_Member')
@@ -47,6 +48,16 @@ class SuggestionController extends Controller
                     return '<span class="badge bg-success">Sudah Selesai</span>';
                 }
                 return '<span class="badge bg-warning text-dark">Belum Selesai</span>';
+            })
+            ->editColumn('Acceptance_First_Suggestion', function ($row) {
+                return $row->Acceptance_First_Suggestion !== null
+                    ? str_pad($row->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT)
+                    : '';
+            })
+            ->editColumn('Acceptance_Last_Suggestion', function ($row) {
+                return $row->Acceptance_Last_Suggestion !== null
+                    ? str_pad($row->Acceptance_Last_Suggestion, 5, '0', STR_PAD_LEFT)
+                    : '';
             })
             ->addColumn('action', function ($row) {
                 return '
@@ -66,6 +77,9 @@ class SuggestionController extends Controller
 
     public function store(Request $request)
     {
+        // $lastNumber = Suggestion::max('Acceptance_First_Suggestion') ?? 0;
+        // $newNumber = $lastNumber + 1;
+
         $request->validate([
             'Id_Member' => 'required',
             'Team_Suggestion' => 'required',
@@ -80,6 +94,7 @@ class SuggestionController extends Controller
             'Content_Suggestion' => $request->Content_Suggestion,
             'Date_First_Suggestion' => Carbon::today(),
             'Status_Suggestion' => 0,
+            // 'Acceptance_First_Suggestion' => $newNumber,
         ]);
 
         return redirect()->route('suggestion.show', $suggestion->Id_Suggestion)
@@ -95,9 +110,10 @@ class SuggestionController extends Controller
         $member = Member::find($Id_Member);
 
         $suggestion = Suggestion::findOrFail($id);
-        $photos = json_decode($suggestion->Content_Photos_Suggestion, true) ?? [];
+        $contentPhotos = json_decode($suggestion->Content_Photos_Suggestion, true) ?? [];
+        $improvementPhotos = json_decode($suggestion->Improvement_Photos_Suggestion, true) ?? [];
 
-        return view('members.suggestions.index', compact('page', 'member', 'suggestion', 'photos'));
+        return view('members.suggestions.index', compact('page', 'member', 'suggestion', 'contentPhotos', 'improvementPhotos'));
     }
 
     // update per-field (inline via modal)
@@ -125,7 +141,30 @@ class SuggestionController extends Controller
             $suggestion->Content_Photos_Suggestion = json_encode($photos);
             $suggestion->save();
 
-            return response()->json(['success' => true, 'photos' => $photos]);
+            return response()->json(['success' => true, 'contentPhotos' => $photos]);
+        }
+
+        if ($request->field === 'Improvement_Photos_Suggestion') {
+            $photos = json_decode($suggestion->Improvement_Photos_Suggestion, true) ?? [];
+            $slot = $request->input('slot', 0);
+
+            if ($request->hasFile('photo')) {
+                $file = $request->file('photo');
+                $name = time().'_'.uniqid().'.'.$file->getClientOriginalExtension();
+                $file->move(public_path('uploads/improvements'), $name);
+
+                // Hapus lama
+                if (!empty($photos[$slot]) && file_exists(public_path('uploads/improvements/'.$photos[$slot]))) {
+                    unlink(public_path('uploads/improvements/'.$photos[$slot]));
+                }
+
+                $photos[$slot] = $name;
+            }
+
+            $suggestion->Improvement_Photos_Suggestion = json_encode($photos);
+            $suggestion->save();
+
+            return response()->json(['success' => true, 'improvementPhotos' => $photos]);
         }
 
         // Update field lain
@@ -141,7 +180,8 @@ class SuggestionController extends Controller
             'Date_Last_Suggestion','Status_Suggestion','Content_Suggestion',
             'Content_Photos_Suggestion','Improvement_Suggestion',
             'Improvement_Photos_Suggestion','Score_A_Suggestion',
-            'Score_B_Suggestion','Comment_Suggestion','Id_User','Acceptance_Suggestion'
+            'Score_B_Suggestion','Comment_Suggestion','Id_User',
+            'Acceptance_First_Suggestion','Acceptance_Last_Suggestion'
         ])) {
             return response()->json(['success' => false, 'message' => 'Kolom tidak valid.']);
         }
