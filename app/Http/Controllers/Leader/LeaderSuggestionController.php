@@ -289,7 +289,12 @@ class LeaderSuggestionController extends Controller
         $suggestion = Suggestion::with(['user','member'])->findOrFail($id);
 
         // Load template Excel
-        $spreadsheet = IOFactory::load(storage_path('app/templates/template_saran_perbaikan.xlsx'));
+        $spreadsheet = IOFactory::load(storage_path('app/templates/saran_perbaikan.xlsx'));
+
+        foreach ($spreadsheet->getDefinedNames() as $definedName) {
+            $spreadsheet->removeDefinedName($definedName->getName());
+        }
+        
         $sheet = $spreadsheet->getActiveSheet();
 
         // Mapping cell sesuai request

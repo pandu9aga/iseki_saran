@@ -7,7 +7,7 @@
 			<h4 class="text-primary">Detail Saran</h4>
 			<a href="{{ route('leader.suggestions.export', $suggestion->Id_Suggestion) }}" 
 			class="btn btn-success btn-sm">
-				<i class="material-icons-two-tone" style="font-size:16px;">download</i> Export Excel
+				<i class="material-icons-two-tone text-white" style="font-size:16px;">download</i> Export Excel
 			</a>
 		</div>
 
