@@ -79,8 +79,8 @@
                             <span class="pc-mtext">Data User</span>
                         </a>
                     </li>
-                    <li class="pc-item">
-                        <a href="#" class="pc-link">
+                    <li class="pc-item {{ $page === 'member' ? 'active' : '' }}">
+                        <a href="{{ route('member') }}" class="pc-link">
                             <span class="pc-micon"><i class="ph ph-article"></i></span>
                             <span class="pc-mtext">Member</span>
                         </a>

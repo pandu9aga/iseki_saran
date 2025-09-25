@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Carbon\Carbon;
 use App\Models\User;
 use App\Models\Member;
@@ -232,6 +233,8 @@ class LeaderSuggestionController extends Controller
             $formatted = $suggestion->score_a_formatted;
         } elseif ($field === 'Score_B_Suggestion') {
             $formatted = $suggestion->score_b_formatted;
+        } elseif ($field === 'Id_User') {
+            $formatted = $suggestion->user->Name_User; // ambil relasi User
         }
 
         return response()->json([
@@ -278,6 +281,37 @@ class LeaderSuggestionController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Data deleted successfully'
+        ]);
+    }
+
+    public function export($id)
+    {
+        $suggestion = Suggestion::with(['user','member'])->findOrFail($id);
+
+        // Load template Excel
+        $spreadsheet = IOFactory::load(storage_path('app/templates/template_saran_perbaikan.xlsx'));
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Mapping cell sesuai request
+        $sheet->setCellValue('K4', $suggestion->Date_First_Suggestion ?? '');
+        $sheet->setCellValue('AD4', $suggestion->Date_Last_Suggestion ?? '');
+        $sheet->setCellValue('C5', $suggestion->member->nik ?? '');
+        $sheet->setCellValue('Q5', $suggestion->Team_Suggestion ?? '');
+        $sheet->setCellValue('Y5', $suggestion->member->nama ?? '');
+        $sheet->setCellValue('Q11', $suggestion->Theme_Suggestion ?? '');
+        $sheet->setCellValue('B16', $suggestion->Content_Suggestion ?? '');
+        $sheet->setCellValue('AG16', $suggestion->Improvement_Suggestion ?? '');
+        $sheet->setCellValue('AF38', $suggestion->Comment_Suggestion ?? '');
+        $sheet->setCellValue('BC39', $suggestion->user->Name_User ?? '');
+
+        // Output file Excel
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'Saran_Perbaikan_'.$suggestion->Id_Suggestion.'.xlsx';
+
+        return response()->streamDownload(function() use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
     }
 

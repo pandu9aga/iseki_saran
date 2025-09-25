@@ -7,6 +7,7 @@ use App\Http\Controllers\MainController;
 use App\Http\Controllers\Leader\LeaderController;
 use App\Http\Controllers\Leader\LeaderSuggestionController;
 use App\Http\Controllers\Leader\UserController;
+use App\Http\Controllers\Leader\LeaderMemberController;
 use App\Http\Controllers\Member\MemberController;
 use App\Http\Controllers\Member\SuggestionController;
 
@@ -30,6 +31,9 @@ Route::middleware(LeaderMiddleware::class)->group(function () {
     Route::get('/leader/suggestion/{id}', [LeaderSuggestionController::class, 'show'])->name('leader.suggestion.show');
     Route::post('/leader/suggestion/{id}/update-field', [LeaderSuggestionController::class, 'updateField'])->name('leader.suggestion.updateField');
     Route::delete('/leader/suggestion/delete/{Id_Suggestion}', [LeaderSuggestionController::class, 'destroy'])->name('leader.suggestion.destroy');
+    Route::get('/leader/suggestions/{id}/export', [LeaderSuggestionController::class, 'export'])->name('leader.suggestions.export');
+
+    Route::get('/member', [LeaderMemberController::class, 'index'])->name('member');
 });
 
 Route::middleware(MemberMiddleware::class)->group(function () {

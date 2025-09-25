@@ -102,7 +102,7 @@
 								<img src="{{ asset('uploads/contents/' . $contentPhotos[0]) }}" alt="Foto 1" class="img-thumbnail mb-1"
 									style="max-height: 150px;">
 								@else
-								<p class="text-muted">Belum ada foto 1</p>
+								{{-- <p class="text-muted">Belum ada foto 1</p> --}}
 								@endif
 							</td>
 							<td class="col-1 text-center">
@@ -121,7 +121,7 @@
 								<img src="{{ asset('uploads/contents/' . $contentPhotos[1]) }}" alt="Foto 2" class="img-thumbnail mb-1"
 									style="max-height: 150px;">
 								@else
-								<p class="text-muted">Belum ada foto 2</p>
+								{{-- <p class="text-muted">Belum ada foto 2</p> --}}
 								@endif
 							</td>
 							<td class="col-1 text-center">
@@ -154,7 +154,7 @@
 								<img src="{{ asset('uploads/improvements/' . $improvementPhotos[0]) }}" alt="Foto 1" class="img-thumbnail mb-1"
 									style="max-height: 150px;">
 								@else
-								<p class="text-muted">Belum ada foto 1</p>
+								{{-- <p class="text-muted">Belum ada foto 1</p> --}}
 								@endif
 							</td>
 							<td class="col-1 text-center">
@@ -173,7 +173,7 @@
 								<img src="{{ asset('uploads/improvements/' . $improvementPhotos[1]) }}" alt="Foto 2" class="img-thumbnail mb-1"
 									style="max-height: 150px;">
 								@else
-								<p class="text-muted">Belum ada foto 2</p>
+								{{-- <p class="text-muted">Belum ada foto 2</p> --}}
 								@endif
 							</td>
 							<td class="col-1 text-center">

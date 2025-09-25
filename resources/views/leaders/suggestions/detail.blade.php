@@ -4,8 +4,12 @@
 <div class="col-sm-12">
     <div class="card table-card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h4 class="text-primary">Detail Saran</h4>
-        </div>
+			<h4 class="text-primary">Detail Saran</h4>
+			<a href="{{ route('leader.suggestions.export', $suggestion->Id_Suggestion) }}" 
+			class="btn btn-success btn-sm">
+				<i class="material-icons-two-tone" style="font-size:16px;">download</i> Export Excel
+			</a>
+		</div>
 
 		<div class="card-body p-3">
 			<div class="table-responsive">
@@ -35,13 +39,18 @@
 						{{-- Status --}}
 						<tr>
 							<th class="col-2">Status</th>
-							@if ($suggestion->Status_Suggestion == 1)
-								<td><span class="badge bg-success">Sudah Selesai</span></td>
-							@endif
-							@if ($suggestion->Status_Suggestion == 0)
-								<td><span class="badge bg-warning text-dark">Belum Selesai</span></td>
-							@endif
-							<td class="col-1 text-center"></td>
+							<td id="value-Status_Suggestion">
+								@if ($suggestion->Status_Suggestion == 1)
+									<span class="badge bg-success">Sudah Selesai</span>
+								@else
+									<span class="badge bg-warning text-dark">Belum Selesai</span>
+								@endif
+							</td>
+							<td class="col-1 text-center">
+								<button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalStatus">
+									<i class="material-icons-two-tone" style="font-size:16px;">edit</i>
+								</button>
+							</td>
 						</tr>
 
 						{{-- Tanggal Awal --}}
@@ -87,7 +96,7 @@
 								<img src="{{ asset('uploads/contents/' . $contentPhotos[0]) }}" alt="Foto 1" class="img-thumbnail mb-1"
 									style="max-height: 150px;">
 								@else
-								<p class="text-muted">Belum ada foto 1</p>
+								{{-- <p class="text-muted">Belum ada foto 1</p> --}}
 								@endif
 							</td>
 							<td class="col-1 text-center"></td>
@@ -99,7 +108,7 @@
 								<img src="{{ asset('uploads/contents/' . $contentPhotos[1]) }}" alt="Foto 2" class="img-thumbnail mb-1"
 									style="max-height: 150px;">
 								@else
-								<p class="text-muted">Belum ada foto 2</p>
+								{{-- <p class="text-muted">Belum ada foto 2</p> --}}
 								@endif
 							</td>
 							<td class="col-1 text-center"></td>
@@ -120,7 +129,7 @@
 								<img src="{{ asset('uploads/improvements/' . $improvementPhotos[0]) }}" alt="Foto 1" class="img-thumbnail mb-1"
 									style="max-height: 150px;">
 								@else
-								<p class="text-muted">Belum ada foto 1</p>
+								{{-- <p class="text-muted">Belum ada foto 1</p> --}}
 								@endif
 							</td>
 							<td class="col-1 text-center"></td>
@@ -132,7 +141,7 @@
 								<img src="{{ asset('uploads/improvements/' . $improvementPhotos[1]) }}" alt="Foto 2" class="img-thumbnail mb-1"
 									style="max-height: 150px;">
 								@else
-								<p class="text-muted">Belum ada foto 2</p>
+								{{-- <p class="text-muted">Belum ada foto 2</p> --}}
 								@endif
 							</td>
 							<td class="col-1 text-center"></td>
@@ -311,10 +320,10 @@
                 <div class="modal-body">
                     {{-- Text readonly tampilkan nama user session --}}
                     <input type="text" class="form-control mb-2" 
-                           value="{{ session('Name_User') }}" readonly>
+                           value="{{ $user->Name_User }}" readonly>
 
                     {{-- Hidden Id_User sesuai session --}}
-                    <input type="hidden" name="value" value="{{ session('Id_User') }}">
+                    <input type="hidden" name="value" value="{{ $user->Id_User }}">
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary">Simpan</button>
@@ -336,6 +345,30 @@
                 </div>
                 <div class="modal-body">
                     <textarea name="value" class="form-control" rows="4">{{ $suggestion->Comment_Suggestion }}</textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Modal Status --}}
+<div class="modal fade" id="modalStatus" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="ajaxUpdateForm" data-field="Status_Suggestion">
+            @csrf
+            <div class="modal-content">
+                <div class="modal-header bg-primary">
+                    <h5 class="modal-title text-white">Update Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <select name="value" class="form-control">
+                        <option value="0" {{ $suggestion->Status_Suggestion == 0 ? 'selected' : '' }}>Belum Selesai</option>
+                        <option value="1" {{ $suggestion->Status_Suggestion == 1 ? 'selected' : '' }}>Sudah Selesai</option>
+                    </select>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary">Simpan</button>
@@ -400,36 +433,17 @@ $(document).ready(function () {
 						$("#value-Score_B_Suggestion").html(html);
 					}
                     if (field === "Id_User") {
-                        let selected = form.find("option:selected").text();
-                        $("#value-Id_User").text(selected);
-                    }
+						$("#value-Id_User").text(res.value);
+					}
                     if (field === "Comment_Suggestion") {
                         $("#value-Comment_Suggestion").text(value);
                     }
-                    if (field === "Team_Suggestion") {
-                        $("#value-Team_Suggestion").text(value);
-                    }
-                    if (field === "Theme_Suggestion") {
-                        $("#value-Theme_Suggestion").text(value);
-                    }
-                    if (field === "Content_Suggestion") {
-                        $("#value-Content_Suggestion").text(value);
-                    }
-                    if (field === "Improvement_Suggestion") {
-                        $("#value-Improvement_Suggestion").text(value);
-                    }
-                    if (field === "Date_First_Suggestion") {
-                        $("#value-Date_First_Suggestion").text(value);
-                    }
-                    if (field === "Date_Last_Suggestion") {
-                        $("#value-Date_Last_Suggestion").text(value);
-                    }
-                    if (field === "Acceptance_First_Suggestion") {
-                        $("#value-Acceptance_First_Suggestion").text(value);
-                    }
-                    if (field === "Acceptance_Last_Suggestion") {
-                        $("#value-Acceptance_Last_Suggestion").text(value);
-                    }
+                    if (field === "Status_Suggestion") {
+						let badge = value == 1 
+							? '<span class="badge bg-success">Sudah Selesai</span>'
+							: '<span class="badge bg-warning text-dark">Belum Selesai</span>';
+						$("#value-Status_Suggestion").html(badge);
+					}
                     alert("Data berhasil diperbarui!");
                     form.closest(".modal").modal("hide");
                 } else {
