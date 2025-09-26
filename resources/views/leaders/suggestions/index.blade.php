@@ -205,6 +205,12 @@ $(document).ready(function () {
                             '<option value="Waktu">Waktu</option>' +
                             '<option value="Lingkungan">Lingkungan</option>' +
                             '<option value="Moral">Moral</option>' +
+                            '<option value="Fasilitas">Fasilitas</option>' +
+                            '<option value="Mould Jig">Mould Jig</option>' +
+                            '<option value="Set Up">Set Up</option>' +
+                            '<option value="Material">Material</option>' +
+                            '<option value="Metode">Metode</option>' +
+                            '<option value="Informasi">Informasi</option>' +
                             '</select>'
                         );
                     } else if (title === "Skor A") {

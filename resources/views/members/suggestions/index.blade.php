@@ -286,18 +286,18 @@
                 </div>
                 <div class="modal-body">
                     <select name="value" class="form-control">
-                        <option value="Keselamatan"
-                            {{ $suggestion->Theme_Suggestion == 'Keselamatan' ? 'selected' : '' }}>Keselamatan</option>
-                        <option value="Kualitas" {{ $suggestion->Theme_Suggestion == 'Kualitas' ? 'selected' : '' }}>
-                            Kualitas</option>
-                        <option value="Cost" {{ $suggestion->Theme_Suggestion == 'Cost' ? 'selected' : '' }}>Cost
-                        </option>
-                        <option value="Waktu" {{ $suggestion->Theme_Suggestion == 'Waktu' ? 'selected' : '' }}>Waktu
-                        </option>
-                        <option value="Lingkungan"
-                            {{ $suggestion->Theme_Suggestion == 'Lingkungan' ? 'selected' : '' }}>Lingkungan</option>
-                        <option value="Moral" {{ $suggestion->Theme_Suggestion == 'Moral' ? 'selected' : '' }}>Moral
-                        </option>
+                        <option value="Keselamatan" {{ $suggestion->Theme_Suggestion == 'Keselamatan' ? 'selected' : '' }}>Keselamatan</option>
+                        <option value="Kualitas" {{ $suggestion->Theme_Suggestion == 'Kualitas' ? 'selected' : '' }}>Kualitas</option>
+                        <option value="Cost" {{ $suggestion->Theme_Suggestion == 'Cost' ? 'selected' : '' }}>Cost</option>
+                        <option value="Waktu" {{ $suggestion->Theme_Suggestion == 'Waktu' ? 'selected' : '' }}>Waktu</option>
+                        <option value="Lingkungan" {{ $suggestion->Theme_Suggestion == 'Lingkungan' ? 'selected' : '' }}>Lingkungan</option>
+                        <option value="Moral" {{ $suggestion->Theme_Suggestion == 'Moral' ? 'selected' : '' }}>Moral</option>
+						<option value="Fasilitas" {{ $suggestion->Theme_Suggestion == 'Fasilitas' ? 'selected' : '' }}>Fasilitas</option>
+						<option value="Mould Jig" {{ $suggestion->Theme_Suggestion == 'Mould Jig' ? 'selected' : '' }}>Mould Jig</option>
+						<option value="Set Up" {{ $suggestion->Theme_Suggestion == 'Set Up' ? 'selected' : '' }}>Set Up</option>
+						<option value="Material" {{ $suggestion->Theme_Suggestion == 'Material' ? 'selected' : '' }}>Material</option>
+						<option value="Metode" {{ $suggestion->Theme_Suggestion == 'Metode' ? 'selected' : '' }}>Metode</option>
+						<option value="Informasi" {{ $suggestion->Theme_Suggestion == 'Informasi' ? 'selected' : '' }}>Informasi</option>
                     </select>
                 </div>
                 <div class="modal-footer">

@@ -64,7 +64,13 @@
 						<tr>
 							<th class="col-2">No Penerimaan Awal</th>
 							<td id="value-Acceptance_First_Suggestion">{{ $suggestion->acceptance_first_suggestion_formatted }}</td>
-							<td class="col-1 text-center"></td>
+							<td class="col-1 text-center">
+								@if(!$suggestion->Acceptance_First_Suggestion) 
+									<button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalAcceptanceFirst">
+										Terima
+									</button>
+								@endif
+							</td>
 						</tr>
 
 						{{-- Tanggal Akhir --}}
@@ -93,10 +99,13 @@
 							<th class="col-2">Foto Permasalahan 1</th>
 							<td>
 								@if(isset($contentPhotos[0]))
-								<img src="{{ asset('uploads/contents/' . $contentPhotos[0]) }}" alt="Foto 1" class="img-thumbnail mb-1"
-									style="max-height: 150px;">
-								@else
-								{{-- <p class="text-muted">Belum ada foto 1</p> --}}
+								<img src="{{ asset('uploads/contents/' . $contentPhotos[0]) }}"
+									alt="Foto 1"
+									class="img-thumbnail mb-1 preview-img"
+									style="max-height: 150px; cursor:pointer;"
+									data-bs-toggle="modal"
+									data-bs-target="#imageModal"
+									data-src="{{ asset('uploads/contents/' . $contentPhotos[0]) }}">
 								@endif
 							</td>
 							<td class="col-1 text-center"></td>
@@ -105,10 +114,13 @@
 							<th class="col-2">Foto Permasalahan 2</th>
 							<td>
 								@if(isset($contentPhotos[1]))
-								<img src="{{ asset('uploads/contents/' . $contentPhotos[1]) }}" alt="Foto 2" class="img-thumbnail mb-1"
-									style="max-height: 150px;">
-								@else
-								{{-- <p class="text-muted">Belum ada foto 2</p> --}}
+								<img src="{{ asset('uploads/contents/' . $contentPhotos[1]) }}"
+									alt="Foto 2"
+									class="img-thumbnail mb-1 preview-img"
+									style="max-height: 150px; cursor:pointer;"
+									data-bs-toggle="modal"
+									data-bs-target="#imageModal"
+									data-src="{{ asset('uploads/contents/' . $contentPhotos[1]) }}">
 								@endif
 							</td>
 							<td class="col-1 text-center"></td>
@@ -126,10 +138,13 @@
 							<th class="col-2">Foto Perbaikan 1</th>
 							<td>
 								@if(isset($improvementPhotos[0]))
-								<img src="{{ asset('uploads/improvements/' . $improvementPhotos[0]) }}" alt="Foto 1" class="img-thumbnail mb-1"
-									style="max-height: 150px;">
-								@else
-								{{-- <p class="text-muted">Belum ada foto 1</p> --}}
+								<img src="{{ asset('uploads/improvements/' . $improvementPhotos[0]) }}"
+									alt="Foto 1"
+									class="img-thumbnail mb-1 preview-img"
+									style="max-height: 150px; cursor:pointer;"
+									data-bs-toggle="modal"
+									data-bs-target="#imageModal"
+									data-src="{{ asset('uploads/improvements/' . $improvementPhotos[0]) }}">
 								@endif
 							</td>
 							<td class="col-1 text-center"></td>
@@ -138,10 +153,13 @@
 							<th class="col-2">Foto Perbaikan 2</th>
 							<td>
 								@if(isset($improvementPhotos[1]))
-								<img src="{{ asset('uploads/improvements/' . $improvementPhotos[1]) }}" alt="Foto 2" class="img-thumbnail mb-1"
-									style="max-height: 150px;">
-								@else
-								{{-- <p class="text-muted">Belum ada foto 2</p> --}}
+								<img src="{{ asset('uploads/improvements/' . $improvementPhotos[1]) }}"
+									alt="Foto 2"
+									class="img-thumbnail mb-1 preview-img"
+									style="max-height: 150px; cursor:pointer;"
+									data-bs-toggle="modal"
+									data-bs-target="#imageModal"
+									data-src="{{ asset('uploads/improvements/' . $improvementPhotos[1]) }}">
 								@endif
 							</td>
 							<td class="col-1 text-center"></td>
@@ -221,6 +239,25 @@
 			</div>
 		</div>
     </div>
+</div>
+
+<!-- Modal Preview -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+	<div class="modal-dialog modal-lg modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-body d-flex justify-content-center align-items-center" style="overflow: hidden;">
+				<div id="image-container" style="overflow: hidden; max-width: 100%; max-height: 80vh; position: relative; cursor: grab;">
+					<img id="zoomImage" src="" 
+					    style="max-width: 100%; max-height: 100%; transform-origin: center center; transition: transform 0.1s ease;">
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button class="btn btn-sm btn-primary" id="zoomIn">+</button>
+				<button class="btn btn-sm btn-secondary" id="zoomOut">-</button>
+				<button class="btn btn-sm btn-danger" data-bs-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
 </div>
 
 {{-- Modal Skor A --}}
@@ -378,6 +415,27 @@
     </div>
 </div>
 
+{{-- Modal No Penerimaan Awal --}}
+<div class="modal fade" id="modalAcceptanceFirst" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="ajaxUpdateForm" data-field="Acceptance_First_Suggestion">
+            @csrf
+            <div class="modal-content">
+                <div class="modal-header bg-success">
+                    <h5 class="modal-title text-white">Konfirmasi Penerimaan Awal</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Apakah Anda yakin ingin menerima usulan ini?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Terima</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 @endsection
 
 @section('style')
@@ -444,6 +502,12 @@ $(document).ready(function () {
 							: '<span class="badge bg-warning text-dark">Belum Selesai</span>';
 						$("#value-Status_Suggestion").html(badge);
 					}
+					if (field === "Acceptance_First_Suggestion") {
+						$("#value-Acceptance_First_Suggestion").text(res.value);
+						form.closest(".modal").modal("hide");
+						// hapus tombol "Terima"
+						$("#value-Acceptance_First_Suggestion").closest("tr").find("td:last").html("");
+					}
                     alert("Data berhasil diperbarui!");
                     form.closest(".modal").modal("hide");
                 } else {
@@ -455,6 +519,89 @@ $(document).ready(function () {
             }
         });
     });
+});
+</script>
+
+<script>
+let scale = 1;
+let posX = 0, posY = 0;
+let isDragging = false;
+let startX, startY;
+
+const img = document.getElementById("zoomImage");
+const container = document.getElementById("image-container");
+
+// Saat klik thumbnail
+document.querySelectorAll(".preview-img").forEach(imgThumb => {
+    imgThumb.addEventListener("click", function () {
+        const modalImg = document.getElementById("zoomImage");
+        modalImg.src = this.getAttribute("data-src"); // ambil dari data-src
+
+        // reset posisi & scale setiap kali buka modal
+        scale = 1;
+        posX = 0;
+        posY = 0;
+        updateTransform();
+    });
+});
+
+function updateTransform() {
+  img.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+}
+
+// Zoom In
+document.getElementById("zoomIn").addEventListener("click", () => {
+  scale += 0.2;
+  updateTransform();
+});
+
+// Zoom Out
+document.getElementById("zoomOut").addEventListener("click", () => {
+  if (scale > 0.4) scale -= 0.2;
+  updateTransform();
+});
+
+// Scroll zoom
+container.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  if (e.deltaY < 0) scale += 0.1; // zoom in
+  else if (scale > 0.4) scale -= 0.1; // zoom out
+  updateTransform();
+});
+
+// Drag (geser gambar kalau di zoom)
+container.addEventListener("mousedown", (e) => {
+  if (scale > 1) {
+    isDragging = true;
+    startX = e.clientX - posX;
+    startY = e.clientY - posY;
+    container.style.cursor = "grabbing";
+  }
+});
+container.addEventListener("mouseup", () => {
+  isDragging = false;
+  container.style.cursor = "grab";
+});
+container.addEventListener("mouseleave", () => {
+  isDragging = false;
+  container.style.cursor = "grab";
+});
+container.addEventListener("mousemove", (e) => {
+  if (isDragging) {
+    posX = e.clientX - startX;
+    posY = e.clientY - startY;
+
+    // batasi biar tidak overflow dari modal
+    const rect = container.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
+    const maxX = Math.max(0, (imgRect.width - rect.width) / 2);
+    const maxY = Math.max(0, (imgRect.height - rect.height) / 2);
+
+    posX = Math.min(maxX, Math.max(-maxX, posX));
+    posY = Math.min(maxY, Math.max(-maxY, posY));
+
+    updateTransform();
+  }
 });
 </script>
 @endsection
