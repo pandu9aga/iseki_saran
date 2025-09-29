@@ -361,10 +361,10 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-0">
-                <div id="tui-image-editor" style="height:600px;"></div>
+                <div id="tui-image-editor" class="w-100 h-100"></div>
             </div>
             <div class="modal-footer">
-                <button id="saveEditedPhoto" class="btn btn-primary">Simpan</button>
+                <button id="saveEditedPhoto" class="btn btn-primary w-100">Simpan</button>
             </div>
         </div>
     </div>
@@ -374,6 +374,75 @@
 
 @section('style')
 <meta name="csrf-token" content="{{ csrf_token() }}">
+
+<style>
+    /* Biar editor memenuhi modal */
+    /* #tui-image-editor {
+        width: 100% !important;
+        height: calc(100vh - 120px) !important;
+    } */
+
+    /* Menu Toast UI agar tidak overflow di HP */
+    .tui-image-editor-container {
+        max-width: 100% !important;
+        max-height: 100% !important;
+    }
+
+    /* Perkecil ukuran tombol menu di layar kecil */
+    @media (max-width: 576px) {
+        .tui-image-editor-container .tui-image-editor-menu {
+            height: 50px !important;
+        }
+        .tui-image-editor-container .tui-image-editor-controls {
+            font-size: 12px !important;
+        }
+
+		/* Header buttons jadi center */
+		.tui-image-editor-header-buttons {
+			justify-content: center !important;
+			margin-right: 180px !important;
+		}
+
+    }
+
+	/* Hilangkan logo */
+	.tui-image-editor-header-logo {
+		display: none !important;
+	}
+
+	.tie-btn-history {
+		display: none !important;
+	}
+
+	.tie-btn-reset {
+		display: none !important;
+	}
+
+	.tie-btn-deleteAll {
+		display: none !important;
+	}
+
+	/* Turunkan posisi controls */
+	.tui-image-editor-help-menu {
+		margin-top: 50px !important; /* atur sesuai selera */
+	}
+
+	.triangle {
+		display: none !important;
+	}
+
+	.tui-image-editor-button[data-icontype="icon-arrow-3"],
+	.tui-image-editor-button[data-icontype="icon-star"],
+	.tui-image-editor-button[data-icontype="icon-star-2"],
+	.tui-image-editor-button[data-icontype="icon-polygon"],
+	.tui-image-editor-button[data-icontype="icon-location"],
+	.tui-image-editor-button[data-icontype="icon-heart"],
+	.tui-image-editor-button[data-icontype="icon-bubble"] {
+		display: none !important;
+	}
+
+</style>
+
 @endsection
 
 
@@ -441,21 +510,21 @@
 
         // Inisialisasi editor
         imageEditor = new tui.ImageEditor(document.querySelector('#tui-image-editor'), {
-            includeUI: {
-                loadImage: {
-                    path: photoUrl || '',
-                    name: 'CurrentPhoto',
-                },
-                menu: ['shape', 'draw', 'icon', 'text', 'filter'],
-                uiSize: {
-                    width: '100%',
-                    height: '720px'
-                },
-                menuBarPosition: 'bottom',
-            },
-            cssMaxWidth: 720,
-            cssMaxHeight: 720,
-        });
+			includeUI: {
+				loadImage: {
+					path: photoUrl || '',
+					name: 'CurrentPhoto',
+				},
+				menu: ['shape', 'icon', 'crop'], // biar simple di HP
+				uiSize: {
+					width: '100%',
+					height: '100%'
+				},
+				menuBarPosition: 'bottom',
+			},
+			cssMaxWidth: window.innerWidth,
+			cssMaxHeight: window.innerHeight,
+		});
 
         $('#photoEditorModal').modal('show');
     });
