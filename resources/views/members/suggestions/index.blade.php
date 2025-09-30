@@ -493,6 +493,44 @@
     let currentSlot = null;
     let currentField = null;
 
+    // Fungsi resize/kompres sebelum load
+    function resizeImage(file, maxWidth = 1280, maxHeight = 1280, quality = 0.8) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            const reader = new FileReader();
+
+            reader.onload = e => {
+                img.src = e.target.result;
+            };
+
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth || height > maxHeight) {
+                    const scale = Math.min(maxWidth / width, maxHeight / height);
+                    width = width * scale;
+                    height = height * scale;
+                }
+
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob(
+                    blob => resolve(blob),
+                    "image/jpeg",
+                    quality
+                );
+            };
+
+            img.onerror = err => reject(err);
+            reader.readAsDataURL(file);
+        });
+    }
+
     // Klik tombol edit foto
     $(document).on('click', '.edit-photo-btn', function () {
         currentSlot = $(this).data('slot');
@@ -502,82 +540,114 @@
         // Reset container
         $('#tui-image-editor').html('');
 
-        // Hancurkan instance lama
         if (imageEditor) {
             imageEditor.destroy();
             imageEditor = null;
         }
 
-        // Inisialisasi editor
         imageEditor = new tui.ImageEditor(document.querySelector('#tui-image-editor'), {
-			includeUI: {
-				loadImage: {
-					path: photoUrl || '',
-					name: 'CurrentPhoto',
-				},
-				menu: ['shape', 'icon', 'crop'], // biar simple di HP
-				uiSize: {
-					width: '100%',
-					height: '100%'
-				},
-				menuBarPosition: 'bottom',
-			},
-			cssMaxWidth: window.innerWidth,
-			cssMaxHeight: window.innerHeight,
-		});
+            includeUI: {
+                loadImage: {
+                    path: photoUrl || '',
+                    name: 'CurrentPhoto',
+                },
+                menu: ['shape', 'icon', 'crop'],
+                uiSize: {
+                    width: '100%',
+                    height: '100%'
+                },
+                menuBarPosition: 'bottom',
+            },
+            cssMaxWidth: window.innerWidth,
+            cssMaxHeight: window.innerHeight,
+        });
+
+        // 🔥 intercept tombol Load bawaan Toast UI
+        imageEditor.on('loadImage', function (event) {
+            const file = event.srcImageFile;
+            if (file) {
+                resizeImage(file, 1280, 1280, 0.8).then(resizedBlob => {
+                    const newUrl = URL.createObjectURL(resizedBlob);
+                    imageEditor.loadImageFromURL(newUrl, 'CompressedPhoto').then(() => {
+                        console.log("Image compressed & loaded");
+                    });
+                });
+            }
+        });
 
         $('#photoEditorModal').modal('show');
     });
 
     // Simpan hasil edit
-    $('#saveEditedPhoto').on('click', function () {
-        if (!imageEditor) return;
+	$('#saveEditedPhoto').on('click', function () {
+		if (!imageEditor) return;
 
-        const dataURL = imageEditor.toDataURL({
-            format: 'jpg',
-            quality: 1.0
-        });
+		// ambil dataURL dari editor
+		const dataURL = imageEditor.toDataURL({
+			format: 'jpeg', // pakai jpeg supaya lebih kecil
+			quality: 0.8    // turunin quality
+		});
 
-        if (!dataURL) {
-            alert("Gagal mengambil data dari editor.");
-            return;
-        }
+		if (!dataURL) {
+			alert("Gagal mengambil data dari editor.");
+			return;
+		}
 
-        const blob = dataURLtoBlob(dataURL);
+		// resize ulang sebelum upload
+		resizeDataURL(dataURL, 1280, 1280, 0.8).then(resizedBlob => {
+			let formData = new FormData();
+			formData.append('field', currentField);
+			formData.append('slot', currentSlot);
+			formData.append('photo', resizedBlob, 'edited.jpg');
+			formData.append('_token', "{{ csrf_token() }}");
 
-        let formData = new FormData();
-        formData.append('field', currentField);
-        formData.append('slot', currentSlot);
-        formData.append('photo', blob, 'edited.jpg');
-        formData.append('_token', "{{ csrf_token() }}");
+			$.ajax({
+				url: "{{ route('suggestion.updateField', $suggestion->Id_Suggestion) }}",
+				type: "POST",
+				data: formData,
+				processData: false,
+				contentType: false,
+				success: function (res) {
+					if (res.success) {
+						location.reload();
+					} else {
+						alert(res.message);
+					}
+				},
+				error: function () {
+					alert("Gagal menyimpan foto.");
+				}
+			});
+		});
+	});
 
-        $.ajax({
-            url: "{{ route('suggestion.updateField', $suggestion->Id_Suggestion) }}",
-            type: "POST",
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function (res) {
-                if (res.success) {
-                    location.reload();
-                } else {
-                    alert(res.message);
-                }
-            },
-            error: function () {
-                alert("Gagal menyimpan foto.");
-            }
-        });
-    });
+    // helper: resize dari dataURL → Blob
+	function resizeDataURL(dataURL, maxWidth, maxHeight, quality) {
+		return new Promise(resolve => {
+			const img = new Image();
+			img.onload = () => {
+				let width = img.width;
+				let height = img.height;
+				if (width > maxWidth || height > maxHeight) {
+					const scale = Math.min(maxWidth / width, maxHeight / height);
+					width = width * scale;
+					height = height * scale;
+				}
+				const canvas = document.createElement("canvas");
+				canvas.width = width;
+				canvas.height = height;
+				const ctx = canvas.getContext("2d");
+				ctx.drawImage(img, 0, 0, width, height);
 
-    // Helper: convert base64 → Blob
-    function dataURLtoBlob(dataURL) {
-        const byteString = atob(dataURL.split(',')[1]);
-        const mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0];
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-        return new Blob([ab], { type: mimeString });
-    }
+				canvas.toBlob(
+					blob => resolve(blob),
+					"image/jpeg",
+					quality
+				);
+			};
+			img.src = dataURL;
+		});
+	}
 </script>
+
 @endsection
