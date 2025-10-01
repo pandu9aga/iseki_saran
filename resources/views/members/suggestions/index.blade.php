@@ -319,8 +319,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <textarea class="form-control" name="value"
-                        rows="4">{{ $suggestion->Content_Suggestion }}</textarea>
+                    <textarea class="form-control" name="value" rows="4">{{ $suggestion->Content_Suggestion }}</textarea>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary">Simpan</button>
