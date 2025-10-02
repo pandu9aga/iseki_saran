@@ -585,8 +585,8 @@ class LeaderSuggestionController extends Controller
                             $drawing->setPath($filePath);
                             $drawing->setCoordinates($cell);
                             $drawing->setOffsetX(200);
-                            $drawing->setOffsetY(50);
-                            $drawing->setWidthAndHeight(600, 360); // otomatis scale
+                            $drawing->setOffsetY(20);
+                            $drawing->setWidthAndHeight(660, 420); // otomatis scale
                             $drawing->setWorksheet($sheet);
                         }
                     }
@@ -608,8 +608,8 @@ class LeaderSuggestionController extends Controller
                             $drawing->setPath($filePath);
                             $drawing->setCoordinates($cell);
                             $drawing->setOffsetX(200);
-                            $drawing->setOffsetY(50);
-                            $drawing->setWidthAndHeight(600, 360); // otomatis scale
+                            $drawing->setOffsetY(20);
+                            $drawing->setWidthAndHeight(660, 420); // otomatis scale
                             $drawing->setWorksheet($sheet);
                         }
                     }

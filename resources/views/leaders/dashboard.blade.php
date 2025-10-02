@@ -1,14 +1,210 @@
 @extends('layouts.leader')
 
 @section('content')
-<div class="col-sm-12">
-    <div class="card table-card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h4 class="text-primary">Dashboard Leader</h4>
+<div class="row">
+    <div class="col-md-3">
+        <div class="card table-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="text-primary">Dashboard Leader</h4>
+            </div>
+            <div class="card-body p-3">
+                <p>Selamat datang, {{ $user->Name_User ?? 'Leader' }}</p>
+            </div>
         </div>
-        <div class="card-body p-3">
-            <p>Selamat datang, {{ $user->Name_User ?? 'Leader' }}</p>
+    </div>
+    <div class="col-md-6">
+        <div class="card table-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="text-primary">Data Member</h5>
+            </div>
+            <div class="card-body p-2" style="max-width: 300px; margin:auto;">
+                <canvas id="memberChart"></canvas>
+            </div>
         </div>
     </div>
 </div>
+<div class="row">
+    <div class="col-md-9">
+        <div class="card table-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="text-primary">Data Saran <span class="text-secondary" id="thisMonth"></span></h5>
+            </div>
+            <div class="card-body p-2" style="max-width: 500px;">
+                <canvas id="suggestionChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
+@section('script')
+<script src="{{ asset('assets/js/chart.min.js') }}"></script>
+<script>
+fetch("{{ route('member.stats') }}")
+    .then(res => res.json())
+    .then(data => {
+        let ctx = document.getElementById('memberChart').getContext('2d');
+
+        let labels = data.byDivision.map(item => item.nama);
+        let values = data.byDivision.map(item => item.total);
+
+        // warna random beda2
+        let backgroundColors = [
+            'rgba(255, 99, 132, 0.9)',
+            'rgba(54, 162, 235, 0.9)',
+            'rgba(255, 206, 86, 0.9)',
+            'rgba(75, 192, 192, 0.9)',
+            'rgba(153, 102, 255, 0.9)',
+            'rgba(255, 159, 64, 0.9)'
+        ];
+
+        // Plugin untuk total di tengah pie chart
+        const centerText = {
+            id: 'centerText',
+            beforeDraw(chart) {
+                const { ctx, chartArea: { top, bottom, left, right } } = chart;
+
+                const xCenter = (left + right) / 2;
+                const yCenter = (top + bottom) / 2;
+
+                ctx.save();
+                ctx.font = 'bold 18px Arial';
+                ctx.fillStyle = 'grey';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('Total: ' + chart.config.data.datasets[0].data.reduce((a,b)=>a+b,0), xCenter, yCenter);
+                ctx.restore();
+            }
+        };
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Jumlah Member per Divisi',
+                    data: values,
+                    backgroundColor: backgroundColors,
+                    borderColor: 'white',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Jumlah Member per Divisi'
+                    },
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            generateLabels(chart) {
+                                const data = chart.data;
+                                if (data.labels.length && data.datasets.length) {
+                                    return data.labels.map((label, i) => {
+                                        let value = data.datasets[0].data[i];
+                                        let backgroundColor = data.datasets[0].backgroundColor[i];
+
+                                        return {
+                                            text: `${label} (${value})`, // tampil nama + nilai
+                                            fillStyle: backgroundColor,
+                                            strokeStyle: backgroundColor,
+                                            hidden: isNaN(value) || chart.getDatasetMeta(0).data[i].hidden,
+                                            index: i
+                                        };
+                                    });
+                                }
+                                return [];
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [centerText]
+        });
+    });
+
+fetch("{{ route('suggestion.stats') }}")
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("thisMonth").innerText = "(" + data.month + ")";
+
+        let ctx = document.getElementById('suggestionChart').getContext('2d');
+
+        let labels = data.byTeam.map(item => item.Team_Suggestion);
+        let values = data.byTeam.map(item => item.total);
+
+        let totalAll = values.reduce((a, b) => a + b, 0);
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Jumlah Saran',
+                    data: values,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.9)',
+                        'rgba(54, 162, 235, 0.9)',
+                        'rgba(255, 206, 86, 0.9)',
+                        'rgba(75, 192, 192, 0.9)',
+                        'rgba(153, 102, 255, 0.9)',
+                        'rgba(255, 159, 64, 0.9)'
+                    ],
+                    borderColor: 'white',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Jumlah Saran per Divisi'
+                    },
+                    subtitle: {
+                        display: true,
+                        text: 'Total semua saran: ' + totalAll,
+                        padding: { bottom: 10 },
+                        color: 'black',
+                        font: { weight: 'bold', size: 14 }
+                    },
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            generateLabels(chart) {
+                                const data = chart.data;
+                                if (data.labels.length && data.datasets.length) {
+                                    return data.labels.map((label, i) => {
+                                        let value = data.datasets[0].data[i];
+                                        let backgroundColor = data.datasets[0].backgroundColor[i];
+                                        return {
+                                            text: `${label} (${value})`,
+                                            fillStyle: backgroundColor,
+                                            strokeStyle: backgroundColor,
+                                            hidden: isNaN(value) || chart.getDatasetMeta(0).data[i].hidden,
+                                            index: i
+                                        };
+                                    });
+                                }
+                                return [];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
 @endsection

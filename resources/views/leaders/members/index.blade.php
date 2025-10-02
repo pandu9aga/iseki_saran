@@ -15,6 +15,7 @@
                                 <th class="text-primary text-center col-1">No</th>
                                 <th class="text-primary text-center">Name</th>
                                 <th class="text-primary text-center">NIK</th>
+                                <th class="text-primary text-center">Team</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -23,6 +24,7 @@
                                     <td class="text-center">{{ $loop->iteration }}</td>
                                     <td>{{ $member->nama }}</td>
                                     <td class="text-center">{{ $member->nik }}</td>
+                                    <td class="text-center">{{ $member->division->nama ?? '' }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
