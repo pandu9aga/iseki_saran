@@ -10,7 +10,7 @@ class Division extends Model
     use HasFactory;
 
     protected $connection = 'rifa';
-    protected $table = 'employees'; // Nama tabel
+    protected $table = 'divisions'; // Nama tabel
     protected $primaryKey = 'id'; // Nama primary key
 
     protected $fillable = ['nama'];

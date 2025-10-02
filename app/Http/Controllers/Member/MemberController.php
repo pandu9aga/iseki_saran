@@ -16,7 +16,7 @@ class MemberController extends Controller
         $page = "home";
 
         $Id_Member = session('Id_Member');
-        $member = Member::find($Id_Member);
+        $member = Member::where('id', $Id_Member)->with('division')->first();
 
         return view('members.home', compact('page', 'member'));
     }

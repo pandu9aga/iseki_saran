@@ -30,11 +30,12 @@
                             <div class="row">
                                 <div class="col mb-1">
                                     <label for="Team_Suggestion" class="form-label">Team</label>
-                                    <select id="Team_Suggestion" name="Team_Suggestion" class="form-control">
+                                    {{-- <select id="Team_Suggestion" name="Team_Suggestion" class="form-control">
                                         <option value="Assembling">Assembling</option>
                                         <option value="Painting">Painting</option>
                                         <option value="DST">DST</option>
-                                    </select>
+                                    </select> --}}
+                                    <input type="text" id="Team_Suggestion" name="Team_Suggestion" class="form-control" value="{{ $member->division->nama }}" readonly/>
                                 </div>
                             </div>
                             <div class="row">
