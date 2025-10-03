@@ -13,6 +13,15 @@ use Yajra\DataTables\Facades\DataTables;
 
 class SuggestionController extends Controller
 {
+    public function create()
+    {
+        $page = "suggestion";
+        $Id_Member = session('Id_Member');
+        $member = Member::find($Id_Member);
+
+        return view('members.suggestions.create', compact('page', 'member'));
+    }
+
     public function getSuggestions(Request $request)
     {
         $Id_Member = $request->get('Id_Member');

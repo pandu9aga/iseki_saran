@@ -5,12 +5,13 @@
     <div class="card table-card">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h4 class="text-primary">Data Saran</h4>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSuggestionModal">
+            {{-- <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSuggestionModal"> --}}
+            <button class="btn btn-primary" type="button" onclick="window.location.href='{{ route('suggestion.create') }}'">
                 Tambah Saran
             </button>
         </div>
         <!-- Modal -->
-        <div class="modal fade" id="addSuggestionModal" tabindex="-1" aria-hidden="true">
+        {{-- <div class="modal fade" id="addSuggestionModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" role="document">
                 <div class="modal-content">
                     <form action="{{ route('suggestion.store') }}" method="POST" style="display:inline;" enctype="multipart/form-data">
@@ -30,11 +31,6 @@
                             <div class="row">
                                 <div class="col mb-1">
                                     <label for="Team_Suggestion" class="form-label">Team</label>
-                                    {{-- <select id="Team_Suggestion" name="Team_Suggestion" class="form-control">
-                                        <option value="Assembling">Assembling</option>
-                                        <option value="Painting">Painting</option>
-                                        <option value="DST">DST</option>
-                                    </select> --}}
                                     <input type="text" id="Team_Suggestion" name="Team_Suggestion" class="form-control" value="{{ $member->division->nama }}" readonly/>
                                 </div>
                             </div>
@@ -73,7 +69,7 @@
                     </form>
                 </div>
             </div>
-        </div>
+        </div> --}}
         <div class="card-body p-3">
             <div class="table-responsive text-nowrap">
                 <table id="suggestionsTable" class="table table-bordered">
@@ -81,11 +77,8 @@
                         <tr>
                             <th class="text-primary">No</th>
                             <th class="text-primary">Member</th>
-                            <th class="text-primary">Team</th>
                             <th class="text-primary">Tema</th>
                             <th class="text-primary">Tanggal Penyerahan Awal</th>
-                            <th class="text-primary">Tanggal Penyerahan Akhir</th>
-                            <th class="text-primary">Status</th>
                             <th class="text-primary">Permasalahan</th>
                             <th class="text-primary">Foto Permasalahan</th>
                             <th class="text-primary">Perbaikan</th>
@@ -94,8 +87,11 @@
                             <th class="text-primary">Skor B</th>
                             <th class="text-primary">Komentar</th>
                             <th class="text-primary">Leader</th>
+                            <th class="text-primary">Status</th>
+                            <th class="text-primary">Tanggal Penyerahan Akhir</th>
                             <th class="text-primary">No Penerimaan Awal</th>
                             <th class="text-primary">No Penerimaan Akhir</th>
+                            <th class="text-primary">Team</th>
                             <th class="text-primary">Action</th>
                         </tr>
                     </thead>
@@ -129,7 +125,7 @@ $(document).ready(function () {
         serverSide: true,
         deferRender: true,
         pageLength: 50,
-        order: [[1, 'asc']],
+        order: [[3, 'desc']],
         ajax: {
             url: '{{ route("suggestions.data") }}',
             data: function (d) {
@@ -152,11 +148,8 @@ $(document).ready(function () {
         columns: [
             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
             { data: 'member_nama', name: 'employees.nama' },
-            { data: 'Team_Suggestion', name: 'Team_Suggestion' },
             { data: 'Theme_Suggestion', name: 'Theme_Suggestion' },
             { data: 'Date_First_Suggestion', name: 'Date_First_Suggestion' },
-            { data: 'Date_Last_Suggestion', name: 'Date_Last_Suggestion' },
-            { data: 'Status_Suggestion', name: 'Status_Suggestion' },
             { 
                 data: 'Content_Suggestion', 
                 name: 'Content_Suggestion',
@@ -228,8 +221,11 @@ $(document).ready(function () {
                 }
             },
             { data: 'user_name', name: 'users.Name_User' },
+            { data: 'Status_Suggestion', name: 'Status_Suggestion' },
+            { data: 'Date_Last_Suggestion', name: 'Date_Last_Suggestion' },
             { data: 'Acceptance_First_Suggestion', name: 'Acceptance_First_Suggestion' },
             { data: 'Acceptance_Last_Suggestion', name: 'Acceptance_Last_Suggestion' },
+            { data: 'Team_Suggestion', name: 'Team_Suggestion' },
             { data: 'action', name: 'action', orderable: false, searchable: false },
         ],
         initComplete: function () {

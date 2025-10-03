@@ -40,6 +40,7 @@ Route::middleware(MemberMiddleware::class)->group(function () {
     Route::get('/home', [MemberController::class, 'index'])->name('home');
 
     Route::post('/suggestion', [SuggestionController::class, 'store'])->name('suggestion.store');
+    Route::get('/suggestion/create', [SuggestionController::class, 'create'])->name('suggestion.create');
     Route::get('/suggestion/{id}', [SuggestionController::class, 'show'])->name('suggestion.show');
     Route::post('/suggestion/{id}/update-field', [SuggestionController::class, 'updateField'])->name('suggestion.updateField');
     Route::delete('/suggestion/delete/{Id_Suggestion}', [SuggestionController::class, 'destroy'])->name('suggestion.destroy');
