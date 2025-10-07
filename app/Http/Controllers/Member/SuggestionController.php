@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use Illuminate\Support\Facades\File;
 use Carbon\Carbon;
 use App\Models\Member;
 use App\Models\Suggestion;
@@ -20,6 +21,61 @@ class SuggestionController extends Controller
         $member = Member::find($Id_Member);
 
         return view('members.suggestions.create', compact('page', 'member'));
+    }
+
+    public function insert(Request $request)
+    {
+        $request->validate([
+            'Id_Member' => 'required',
+            'Team_Suggestion' => 'required',
+            'Theme_Suggestion' => 'required',
+            'Content_Suggestion' => 'required',
+            'Content_Photos_Suggestion' => 'nullable|array',
+        ]);
+
+        // === Proses gambar (base64 array) ===
+        $savedPhotos = [];
+
+        if ($request->has('Content_Photos_Suggestion')) {
+            foreach ($request->Content_Photos_Suggestion as $i => $base64) {
+                if (!$base64) continue;
+
+                // Ambil ekstensi dari base64
+                preg_match('/^data:image\/(\w+);base64,/', $base64, $type);
+                $extension = $type[1] ?? 'png';
+
+                // Hapus header base64
+                $data = preg_replace('/^data:image\/\w+;base64,/', '', $base64);
+                $data = str_replace(' ', '+', $data);
+
+                // Simpan ke file
+                $filename = time().'_'.$i.'_'.uniqid().'.'.$extension;
+                $path = public_path('uploads/contents/'.$filename);
+
+                // Pastikan folder ada
+                if (!File::exists(public_path('uploads/contents'))) {
+                    File::makeDirectory(public_path('uploads/contents'), 0777, true);
+                }
+
+                File::put($path, base64_decode($data));
+                $savedPhotos[] = $filename;
+            }
+        }
+
+        // === Simpan data utama ===
+        $suggestion = Suggestion::create([
+            'Id_Member' => $request->Id_Member,
+            'Team_Suggestion' => $request->Team_Suggestion,
+            'Theme_Suggestion' => $request->Theme_Suggestion,
+            'Content_Suggestion' => $request->Content_Suggestion,
+            'Content_Photos_Suggestion' => json_encode($savedPhotos),
+            'Date_First_Suggestion' => Carbon::today(),
+            'Status_Suggestion' => 0,
+        ]);
+
+        return redirect()
+            ->route('suggestion.show', $suggestion->Id_Suggestion)
+            ->with('success', 'Saran berhasil ditambahkan.');
     }
 
     public function getSuggestions(Request $request)
