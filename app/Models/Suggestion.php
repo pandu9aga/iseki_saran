@@ -11,7 +11,7 @@ class Suggestion extends Model
 
     protected $table = 'suggestions'; // Nama tabel
     protected $primaryKey = 'Id_Suggestion'; // Nama primary key
-    
+
     public $timestamps = false; // Jika tabel tidak memiliki created_at dan updated_at
 
     protected $fillable = [
@@ -120,4 +120,10 @@ class Suggestion extends Model
         return $result;
     }
 
+    public function getTotalScoreAttribute()
+    {
+        $scoreA = $this->Score_A_Suggestion ?? 0; // Ambil Skor A
+        $scoreBTotal = $this->score_b_formatted['Total'] ?? 0; // Ambil Total Skor B
+        return $scoreA + $scoreBTotal;
+    }
 }

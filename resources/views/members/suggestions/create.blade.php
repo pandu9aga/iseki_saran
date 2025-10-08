@@ -24,34 +24,34 @@
                     </div>
 
                     <div class="row mb-2">
-						<div class="col">
-							<label for="Theme_Suggestion" class="form-label">Tema Perbaikan <span class="text-danger">*</span></label><br>
-							@foreach(['Keselamatan','Kualitas','Cost','Waktu','Lingkungan','Moral'] as $theme)
-								<div class="form-check form-check-inline">
-									<input class="form-check-input" type="radio" name="Theme_Suggestion" id="{{ $theme }}" value="{{ $theme }}" required>
-									<label class="form-check-label" for="{{ $theme }}">{{ $theme }}</label>
-								</div>
-							@endforeach
-						</div>
-					</div>
+                      <div class="col">
+                        <label for="Theme_Suggestion" class="form-label">Tema Perbaikan <span class="text-danger">*</span></label><br>
+                        @foreach(['Keselamatan','Kualitas','Cost','Waktu','Lingkungan','Moral'] as $theme)
+                          <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="Theme_Suggestion" id="{{ $theme }}" value="{{ $theme }}" required>
+                            <label class="form-check-label" for="{{ $theme }}">{{ $theme }}</label>
+                          </div>
+                        @endforeach
+                      </div>
+                    </div>
 
-					<div class="row mb-2">
-						<div class="col">
-							<label for="Content_Suggestion" class="form-label">Permasalahan Yang Dialami <span class="text-danger">*</span></label>
-							<textarea id="Content_Suggestion" name="Content_Suggestion" class="form-control" required></textarea>
-						</div>
-					</div>
+                    <div class="row mb-2">
+                      <div class="col">
+                        <label for="Content_Suggestion" class="form-label">Permasalahan Yang Dialami <span class="text-danger">*</span></label>
+                        <textarea id="Content_Suggestion" name="Content_Suggestion" class="form-control" required></textarea>
+                      </div>
+                    </div>
 
                     <div class="row mb-2">
                         <label class="form-label">Foto Permasalahan</label>
                         @for($i = 0; $i < 2; $i++)
                         <div class="col-6 d-flex justify-content-center align-items-center">
                             <div class="photo-upload" data-index="{{ $i }}">
-								<button type="button" class="btn btn-light btn-upload p-4">
-									<i class="material-icons-two-tone" style="font-size:16px;">add</i>
-								</button>
-							</div>
-							<input type="hidden" name="Content_Photos_Suggestion[]" id="photo-path-{{ $i }}">
+                              <button type="button" class="btn btn-light btn-upload p-4">
+                                <i class="material-icons-two-tone" style="font-size:16px;">add</i>
+                              </button>
+                            </div>
+                            <input type="hidden" name="Content_Photos_Suggestion[]" id="photo-path-{{ $i }}">
                         </div>
                         @endfor
                     </div>
@@ -146,7 +146,7 @@
 	transition: 0.3s;
 }
 .photo-upload:hover {
-	border-color: #007bff;
+	border-color: #e83e8c;
 	background: #f9f9f9;
 }
 .photo-upload img {
@@ -248,8 +248,8 @@ function initTuiEditor(initialDataUrl) {
   container.innerHTML = ''; // bersihkan sebelum buat baru
 
   tuiEditor = new tui.ImageEditor(container, {
-    cssMaxWidth: container.clientWidth,
-    cssMaxHeight: container.clientHeight,
+    cssMaxWidth: 2000, //container.clientWidth,
+    cssMaxHeight: 2000, //container.clientHeight,
     usageStatistics: false,
   });
 
@@ -375,7 +375,13 @@ btnDelete.onclick = () => {
 
   // Save
   btnSave.onclick = () => {
-    const dataURL = tuiEditor.toDataURL();
+    const dataURL = tuiEditor.toDataURL({
+        format: 'jpeg',          // atau 'png'
+        quality: 0.8,
+        includeUI: false,
+        multiplier: 1,           // pastikan tidak auto upscale
+    });
+
     const hiddenInput = document.getElementById(`photo-path-${currentEditIndex}`);
     if (hiddenInput) {
       hiddenInput.value = dataURL;

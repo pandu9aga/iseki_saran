@@ -32,27 +32,27 @@ class LeaderSuggestionController extends Controller
         $rifaDb = config('database.connections.rifa.database');
 
         $query = Suggestion::select([
-                'suggestions.Id_Suggestion',
-                'suggestions.Id_Member',
-                'suggestions.Team_Suggestion',
-                'suggestions.Theme_Suggestion',
-                'suggestions.Date_First_Suggestion',
-                'suggestions.Date_Last_Suggestion',
-                'suggestions.Status_Suggestion',
-                'suggestions.Content_Suggestion',
-                'suggestions.Improvement_Suggestion',
-                'suggestions.Content_Photos_Suggestion',
-                'suggestions.Improvement_Photos_Suggestion',
-                'suggestions.Score_A_Suggestion',
-                'suggestions.Score_B_Suggestion',
-                'suggestions.Comment_Suggestion',
-                'suggestions.Id_User',
-                'suggestions.Acceptance_First_Suggestion',
-                'suggestions.Acceptance_Last_Suggestion',
-                $rifaDb.'.employees.nama as member_nama',
-                'users.Name_User as user_name',
-            ])
-            ->leftJoin($rifaDb.'.employees', $rifaDb.'.employees.id', '=', 'suggestions.Id_Member')
+            'suggestions.Id_Suggestion',
+            'suggestions.Id_Member',
+            'suggestions.Team_Suggestion',
+            'suggestions.Theme_Suggestion',
+            'suggestions.Date_First_Suggestion',
+            'suggestions.Date_Last_Suggestion',
+            'suggestions.Status_Suggestion',
+            'suggestions.Content_Suggestion',
+            'suggestions.Improvement_Suggestion',
+            'suggestions.Content_Photos_Suggestion',
+            'suggestions.Improvement_Photos_Suggestion',
+            'suggestions.Score_A_Suggestion',
+            'suggestions.Score_B_Suggestion',
+            'suggestions.Comment_Suggestion',
+            'suggestions.Id_User',
+            'suggestions.Acceptance_First_Suggestion',
+            'suggestions.Acceptance_Last_Suggestion',
+            $rifaDb . '.employees.nama as member_nama',
+            'users.Name_User as user_name',
+        ])
+            ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
             ->leftJoin('users', 'users.Id_User', '=', 'suggestions.Id_User');
 
         return DataTables::of($query)
@@ -127,12 +127,12 @@ class LeaderSuggestionController extends Controller
             })
             ->addColumn('action', function ($row) {
                 return '
-                    <a href="'.route('leader.suggestion.show', $row->Id_Suggestion).'" class="btn btn-sm btn-primary">
+                    <a href="' . route('leader.suggestion.show', $row->Id_Suggestion) . '" class="btn btn-sm btn-primary">
                         <span class="pc-micon"><i class="material-icons-two-tone text-white">edit</i></span>
                     </a>
                     <button class="btn btn-sm btn-danger delete-btn" 
-                            data-id="'.$row->Id_Suggestion.'" 
-                            data-name="'.$row->Content_Suggestion.'">
+                            data-id="' . $row->Id_Suggestion . '" 
+                            data-name="' . $row->Content_Suggestion . '">
                         <span class="pc-micon"><i class="material-icons-two-tone text-white">delete</i></span>
                     </button>
                 ';
@@ -144,7 +144,7 @@ class LeaderSuggestionController extends Controller
                 'Acceptance_First_Suggestion',
                 'Acceptance_Last_Suggestion',
                 'action'
-                ])
+            ])
             ->make(true);
     }
 
@@ -171,7 +171,7 @@ class LeaderSuggestionController extends Controller
         ]);
 
         return redirect()->route('suggestion.show', $suggestion->Id_Suggestion)
-                         ->with('success', 'Saran berhasil ditambahkan.');
+            ->with('success', 'Saran berhasil ditambahkan.');
     }
 
     // detail saran
@@ -182,11 +182,21 @@ class LeaderSuggestionController extends Controller
         $Id_User = session('Id_User');
         $user = User::find($Id_User);
 
+        if (!$user) {
+            return redirect()->route('leader.login')->with('error', 'Sesi login tidak valid.');
+        }
+
         $suggestion = Suggestion::findOrFail($id);
         $contentPhotos = json_decode($suggestion->Content_Photos_Suggestion, true) ?? [];
         $improvementPhotos = json_decode($suggestion->Improvement_Photos_Suggestion, true) ?? [];
 
-        return view('leaders.suggestions.detail', compact('page', 'user', 'suggestion', 'contentPhotos', 'improvementPhotos'));
+        return view('leaders.suggestions.detail', [
+            'page' => $page,
+            'user' => $user,
+            'suggestion' => $suggestion,
+            'contentPhotos' => $contentPhotos,
+            'improvementPhotos' => $improvementPhotos,
+        ]);
     }
 
     // update per-field (inline via modal)
@@ -202,13 +212,21 @@ class LeaderSuggestionController extends Controller
 
         $field = $request->field;
 
-        // hanya field ini yang boleh diupdate
+        // Field yang diizinkan
         $allowed = [
-            'Team_Suggestion', 'Theme_Suggestion', 'Date_First_Suggestion',
-            'Date_Last_Suggestion', 'Status_Suggestion', 'Content_Suggestion',
-            'Improvement_Suggestion', 'Score_A_Suggestion',
-            'Score_B_Suggestion', 'Comment_Suggestion', 'Id_User',
-            'Acceptance_First_Suggestion', 'Acceptance_Last_Suggestion'
+            'Team_Suggestion',
+            'Theme_Suggestion',
+            'Date_First_Suggestion',
+            'Date_Last_Suggestion',
+            'Status_Suggestion',
+            'Content_Suggestion',
+            'Improvement_Suggestion',
+            'Score_A_Suggestion',
+            'Score_B_Suggestion',
+            'Comment_Suggestion',
+            'Id_User',
+            'Acceptance_First_Suggestion',
+            'Acceptance_Last_Suggestion'
         ];
 
         if (!in_array($field, $allowed)) {
@@ -218,11 +236,11 @@ class LeaderSuggestionController extends Controller
             ]);
         }
 
-        // ---------------- Khusus Acceptance ----------------
+        // ---------------- Acceptance Field ----------------
         if ($field === 'Acceptance_First_Suggestion') {
             if ($suggestion->Acceptance_First_Suggestion) {
                 return response()->json([
-                    'success' => false,
+                    'success' => true,
                     'message' => 'Nomor penerimaan awal sudah ada.'
                 ]);
             }
@@ -257,25 +275,47 @@ class LeaderSuggestionController extends Controller
             ]);
         }
 
-        // ---------------- Simpan Data umum ----------------
+        // ---------------- Score B (array input) ----------------
         if ($field === 'Score_B_Suggestion') {
-            $value = $request->input('value', []);
+            $value = $request->input('value');
+
+            // kalau frontend kirim string JSON (bukan array)
+            if (is_string($value)) {
+                $decoded = json_decode($value, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $value = $decoded;
+                }
+            }
+
+            // pastikan value jadi array
+            if (!is_array($value)) {
+                $value = [$value];
+            }
+
+            // simpan dalam bentuk JSON
             $suggestion->Score_B_Suggestion = json_encode($value);
-        } else {
-            $suggestion->$field = $request->value;
+            $suggestion->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Nilai skor B berhasil diperbarui.',
+                'field'   => $field,
+                'value'   => $value, // kirim balik array agar bisa render ulang
+                'formatted' => $suggestion->score_b_formatted ?? implode(', ', $value)
+            ]);
         }
 
+        // ---------------- Field umum lainnya ----------------
+        $suggestion->$field = $request->value;
         $suggestion->save();
 
-        // ---------------- Response ----------------
+        // Formatting untuk response
         $formatted = $suggestion->$field;
 
         if ($field === 'Score_A_Suggestion') {
             $formatted = $suggestion->score_a_formatted;
-        } elseif ($field === 'Score_B_Suggestion') {
-            $formatted = $suggestion->score_b_formatted;
         } elseif ($field === 'Id_User') {
-            $formatted = $suggestion->user->Name_User; // ambil relasi User
+            $formatted = $suggestion->user->Name_User ?? '-';
         }
 
         return response()->json([
@@ -327,7 +367,7 @@ class LeaderSuggestionController extends Controller
 
     public function export($id)
     {
-        $suggestion = Suggestion::with(['user','member'])->findOrFail($id);
+        $suggestion = Suggestion::with(['user', 'member'])->findOrFail($id);
 
         // Load template Excel
         $spreadsheet = IOFactory::load(storage_path('app/templates/saran_perbaikan.xlsx'));
@@ -388,7 +428,7 @@ class LeaderSuggestionController extends Controller
             $pink = imagecolorallocate($img, 255, 0, 151);
             imagesetthickness($img, $thickness);
             $margin = $thickness + 6;
-            imageellipse($img, $size/2, $size/2, $size - $margin, $size - $margin, $pink);
+            imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $pink);
 
             $tmpFile = sys_get_temp_dir() . '/circle_theme_' . $suggestion->Id_Suggestion . '.png';
             imagepng($img, $tmpFile);
@@ -399,7 +439,7 @@ class LeaderSuggestionController extends Controller
             $drawing->setName('ThemeCircle');
             $drawing->setPath($tmpFile);
             $drawing->setCoordinates($targetCell);
-            $specialCells = ['C8','E8','G8','I8','K8','M8'];
+            $specialCells = ['C8', 'E8', 'G8', 'I8', 'K8', 'M8'];
             if (in_array($targetCell, $specialCells)) {
                 $drawing->setOffsetX(12);
                 $drawing->setOffsetY(-3);
@@ -431,7 +471,7 @@ class LeaderSuggestionController extends Controller
             $orange = imagecolorallocate($img, 212, 109, 0); // oranye
             imagesetthickness($img, $thickness);
             $margin = $thickness + 6;
-            imageellipse($img, $size/2, $size/2, $size - $margin, $size - $margin, $orange);
+            imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $orange);
 
             $tmpFile = sys_get_temp_dir() . '/circle_status_' . $suggestion->Id_Suggestion . '.png';
             imagepng($img, $tmpFile);
@@ -483,7 +523,7 @@ class LeaderSuggestionController extends Controller
                 $black = imagecolorallocate($img, 0, 0, 0);
                 imagesetthickness($img, $thickness);
                 $margin = $thickness + 6;
-                imageellipse($img, $size/2, $size/2, $size - $margin, $size - $margin, $black);
+                imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $black);
 
                 $tmpFile = sys_get_temp_dir() . '/circle_score_' . $suggestion->Id_Suggestion . '.png';
                 imagepng($img, $tmpFile);
@@ -514,16 +554,28 @@ class LeaderSuggestionController extends Controller
             if (is_array($scoreB)) {
                 $mappingB = [
                     'kreatifitas' => [
-                        0 => 'Y42', 1 => 'Z42', 2 => 'AA42',
-                        3 => 'AB42', 4 => 'AC42', 5 => 'AD42',
+                        0 => 'Y42',
+                        1 => 'Z42',
+                        2 => 'AA42',
+                        3 => 'AB42',
+                        4 => 'AC42',
+                        5 => 'AD42',
                     ],
                     'ide' => [
-                        0 => 'Y43', 1 => 'Z43', 2 => 'AA43',
-                        3 => 'AB43', 4 => 'AC43', 5 => 'AD43',
+                        0 => 'Y43',
+                        1 => 'Z43',
+                        2 => 'AA43',
+                        3 => 'AB43',
+                        4 => 'AC43',
+                        5 => 'AD43',
                     ],
                     'usaha' => [
-                        0 => 'Y44', 1 => 'Z44', 2 => 'AA44',
-                        3 => 'AB44', 4 => 'AC44', 5 => 'AD44',
+                        0 => 'Y44',
+                        1 => 'Z44',
+                        2 => 'AA44',
+                        3 => 'AB44',
+                        4 => 'AC44',
+                        5 => 'AD44',
                     ],
                 ];
 
@@ -545,7 +597,7 @@ class LeaderSuggestionController extends Controller
                             $black = imagecolorallocate($img, 0, 0, 0);
                             imagesetthickness($img, $thickness);
                             $margin = $thickness + 6;
-                            imageellipse($img, $size/2, $size/2, $size - $margin, $size - $margin, $black);
+                            imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $black);
 
                             $tmpFile = sys_get_temp_dir() . '/circle_scoreB_' . $key . '_' . $suggestion->Id_Suggestion . '.png';
                             imagepng($img, $tmpFile);
@@ -566,7 +618,7 @@ class LeaderSuggestionController extends Controller
                 }
 
                 // Tulis total ke AA45
-                $sheet->setCellValue('AA45', $total);
+                $sheet->setCellValue('AA45', $suggestion->total_score);
             }
         }
 
@@ -576,12 +628,12 @@ class LeaderSuggestionController extends Controller
 
             if (is_array($contentPhotos)) {
                 foreach ($contentPhotos as $i => $photoName) {
-                    $filePath = public_path('uploads/contents/'.$photoName);
+                    $filePath = public_path('uploads/contents/' . $photoName);
                     if (!empty($photoName) && file_exists($filePath)) {
                         $cell = $i == 0 ? 'B19' : ($i == 1 ? 'B24' : null);
                         if ($cell) {
                             $drawing = new Drawing();
-                            $drawing->setName('ContentPhoto'.($i+1));
+                            $drawing->setName('ContentPhoto' . ($i + 1));
                             $drawing->setPath($filePath);
                             $drawing->setCoordinates($cell);
                             $drawing->setOffsetX(200);
@@ -599,12 +651,12 @@ class LeaderSuggestionController extends Controller
 
             if (is_array($improvePhotos)) {
                 foreach ($improvePhotos as $i => $photoName) {
-                    $filePath = public_path('uploads/improvements/'.$photoName);
+                    $filePath = public_path('uploads/improvements/' . $photoName);
                     if (!empty($photoName) && file_exists($filePath)) {
                         $cell = $i == 0 ? 'AG19' : ($i == 1 ? 'AG24' : null);
                         if ($cell) {
                             $drawing = new Drawing();
-                            $drawing->setName('ImprovementPhoto'.($i+1));
+                            $drawing->setName('ImprovementPhoto' . ($i + 1));
                             $drawing->setPath($filePath);
                             $drawing->setCoordinates($cell);
                             $drawing->setOffsetX(200);
@@ -637,9 +689,9 @@ class LeaderSuggestionController extends Controller
 
         // Output file Excel
         $writer = new Xlsx($spreadsheet);
-        $filename = 'Saran_Perbaikan_'.$suggestion->Id_Suggestion.'.xlsx';
+        $filename = 'Saran_Perbaikan_' . $suggestion->Id_Suggestion . '.xlsx';
 
-        return response()->streamDownload(function() use ($writer, $tmpFiles) {
+        return response()->streamDownload(function () use ($writer, $tmpFiles) {
             $writer->save('php://output');
             foreach ($tmpFiles as $file) {
                 if (file_exists($file)) {
@@ -650,5 +702,4 @@ class LeaderSuggestionController extends Controller
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
     }
-
 }

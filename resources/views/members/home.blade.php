@@ -76,22 +76,22 @@
                     <thead>
                         <tr>
                             <th class="text-primary">No</th>
-                            <th class="text-primary">Member</th>
-                            <th class="text-primary">Tema</th>
-                            <th class="text-primary">Tanggal Penyerahan Awal</th>
+                            {{-- <th class="text-primary">Member</th> --}}
                             <th class="text-primary">Permasalahan</th>
                             <th class="text-primary">Foto Permasalahan</th>
                             <th class="text-primary">Perbaikan</th>
                             <th class="text-primary">Foto Perbaikan</th>
+                            <th class="text-primary">Tanggal Penyerahan Awal</th>
                             <th class="text-primary">Skor A</th>
                             <th class="text-primary">Skor B</th>
                             <th class="text-primary">Komentar</th>
                             <th class="text-primary">Leader</th>
                             <th class="text-primary">Status</th>
-                            <th class="text-primary">Tanggal Penyerahan Akhir</th>
+                            <th class="text-primary">Tema</th>
                             <th class="text-primary">No Penerimaan Awal</th>
+                            <th class="text-primary">Tanggal Penyerahan Akhir</th>
                             <th class="text-primary">No Penerimaan Akhir</th>
-                            <th class="text-primary">Team</th>
+                            {{-- <th class="text-primary">Team</th> --}}
                             <th class="text-primary">Action</th>
                         </tr>
                     </thead>
@@ -125,7 +125,7 @@ $(document).ready(function () {
         serverSide: true,
         deferRender: true,
         pageLength: 50,
-        order: [[3, 'desc']],
+        order: [[5, 'desc']],
         ajax: {
             url: '{{ route("suggestions.data") }}',
             data: function (d) {
@@ -140,16 +140,14 @@ $(document).ready(function () {
         scrollY: "500px",
         scrollCollapse: true,
         fixedColumns: {
-            leftColumns: 1,
+            leftColumns: 0,
             rightColumns: 1
         },
         orderCellsTop: true,
         fixedHeader: false,
         columns: [
             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-            { data: 'member_nama', name: 'employees.nama' },
-            { data: 'Theme_Suggestion', name: 'Theme_Suggestion' },
-            { data: 'Date_First_Suggestion', name: 'Date_First_Suggestion' },
+            // { data: 'member_nama', name: 'employees.nama' },
             { 
                 data: 'Content_Suggestion', 
                 name: 'Content_Suggestion',
@@ -210,6 +208,7 @@ $(document).ready(function () {
                     return '';
                 }
             },
+            { data: 'Date_First_Suggestion', name: 'Date_First_Suggestion' },
             { data: 'Score_A_Suggestion', name: 'Score_A_Suggestion' },
             { data: 'Score_B_Suggestion', name: 'Score_B_Suggestion' },
             { 
@@ -222,10 +221,11 @@ $(document).ready(function () {
             },
             { data: 'user_name', name: 'users.Name_User' },
             { data: 'Status_Suggestion', name: 'Status_Suggestion' },
-            { data: 'Date_Last_Suggestion', name: 'Date_Last_Suggestion' },
+            { data: 'Theme_Suggestion', name: 'Theme_Suggestion' },
             { data: 'Acceptance_First_Suggestion', name: 'Acceptance_First_Suggestion' },
+            { data: 'Date_Last_Suggestion', name: 'Date_Last_Suggestion' },
             { data: 'Acceptance_Last_Suggestion', name: 'Acceptance_Last_Suggestion' },
-            { data: 'Team_Suggestion', name: 'Team_Suggestion' },
+            // { data: 'Team_Suggestion', name: 'Team_Suggestion' },
             { data: 'action', name: 'action', orderable: false, searchable: false },
         ],
         initComplete: function () {
@@ -272,12 +272,12 @@ $(document).ready(function () {
                             '<option value="Waktu">Waktu</option>' +
                             '<option value="Lingkungan">Lingkungan</option>' +
                             '<option value="Moral">Moral</option>' +
-                            '<option value="Fasilitas">Fasilitas</option>' +
-                            '<option value="Mould Jig">Mould Jig</option>' +
-                            '<option value="Set Up">Set Up</option>' +
-                            '<option value="Material">Material</option>' +
-                            '<option value="Metode">Metode</option>' +
-                            '<option value="Informasi">Informasi</option>' +
+                            // '<option value="Fasilitas">Fasilitas</option>' +
+                            // '<option value="Mould Jig">Mould Jig</option>' +
+                            // '<option value="Set Up">Set Up</option>' +
+                            // '<option value="Material">Material</option>' +
+                            // '<option value="Metode">Metode</option>' +
+                            // '<option value="Informasi">Informasi</option>' +
                             '</select>'
                         );
                     } else if (title === "Skor A") {
