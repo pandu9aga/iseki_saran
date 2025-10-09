@@ -135,13 +135,21 @@
 
             if ($.fn.DataTable.isDataTable('#usersTable')) {
                 table = $('#usersTable').DataTable();
-                table.page.len(-1).draw(); // ✅ paksa default 100
+                table.page.len(-1).draw(); // ✅ default tampil semua
             } else {
                 table = $('#usersTable').DataTable({
                     pageLength: -1,
-                    lengthMenu: [[10,25,50,100,-1],[10,25,50,100,"All"]]
+                    lengthMenu: [[10,25,50,100,-1],[10,25,50,100,"All"]],
+                    scrollY: '60vh',        // ✅ tinggi maksimal area scroll
+                    scrollCollapse: true,   // jika datanya sedikit, tinggi ikut menyesuaikan
+                    scrollX: true,          // scroll horizontal tetap aktif
                 });
             }
+
+            // biar tabel langsung fit kalau jendela di-resize
+            $(window).on('resize', function() {
+                table.columns.adjust().draw(false);
+            });
         });
     </script>
 @endsection

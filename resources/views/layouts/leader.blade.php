@@ -67,16 +67,34 @@
                             <span class="pc-mtext">Dashboard</span>
                         </a>
                     </li>
+                    <li class="pc-item pc-caption">
+                        <label>Saran</label>
+                    </li>
                     <li class="pc-item {{ $page === 'suggestion' ? 'active' : '' }}">
                         <a href="{{ route('leader.suggestion') }}" class="pc-link">
                             <span class="pc-micon"><i class="ph ph-align-left"></i></span>
-                            <span class="pc-mtext">Saran</span>
+                            <span class="pc-mtext">Bulan Ini</span>
                         </a>
+                    </li>
+                    <li class="pc-item {{ $page === 'not-submit' ? 'active' : '' }}">
+                        <a href="{{ route('leader.suggestion.notSubmit') }}" class="pc-link">
+                            <span class="pc-micon"><i class="ph ph-push-pin-simple-slash"></i></span>
+                            <span class="pc-mtext">Belum Menyerahkan</span>
+                        </a>
+                    </li>
+                    <li class="pc-item {{ $page === 'not-sign' ? 'active' : '' }}">
+                        <a href="{{ route('leader.suggestion.notSign') }}" class="pc-link">
+                            <span class="pc-micon"><i class="ph ph-pencil-simple-slash"></i></span>
+                            <span class="pc-mtext">Belum Dinilai</span>
+                        </a>
+                    </li>
+                    <li class="pc-item pc-caption">
+                        <label>Data</label>
                     </li>
                     <li class="pc-item {{ $page === 'user' ? 'active' : '' }}">
                         <a href="{{ route('leader.users.index') }}" class="pc-link">
                             <span class="pc-micon"><i class="ph ph-address-book"></i></span>
-                            <span class="pc-mtext">Data User</span>
+                            <span class="pc-mtext">User</span>
                         </a>
                     </li>
                     <li class="pc-item {{ $page === 'member' ? 'active' : '' }}">

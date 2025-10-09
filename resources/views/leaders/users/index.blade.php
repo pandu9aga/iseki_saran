@@ -141,7 +141,12 @@
 <script>
 $(document).ready(function() {
     $('#usersTable').DataTable({
+        pageLength: -1,
+        lengthMenu: [[10,25,50,100,-1],[10,25,50,100,"All"]],
         autoWidth: false,
+        scrollY: '60vh',        // ✅ tinggi maksimal area scroll
+        scrollCollapse: true,   // jika datanya sedikit, tinggi ikut menyesuaikan
+        scrollX: true,          // scroll horizontal tetap aktif
         columnDefs: [
             { width: "5%", targets: [0,3] },
             { width: "20%", targets: [1,2] }

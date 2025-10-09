@@ -56,4 +56,77 @@ class LeaderController extends Controller
             'month' => Carbon::now()->translatedFormat('F Y'),
         ]);
     }
+
+    public function notSubmit()
+    {
+        $monthInput = Carbon::now()->format('Y-m');
+
+        // Ambil ID member yang sudah submit bulan tersebut
+        $submittedIds = Suggestion::whereYear('Date_First_Suggestion', substr($monthInput, 0, 4))
+            ->whereMonth('Date_First_Suggestion', substr($monthInput, 5, 2))
+            ->pluck('Id_Member')
+            ->toArray();
+
+        // Ambil semua member yang belum submit
+        $notSubmittedQuery = Member::with('division')
+            ->whereNotIn('id', $submittedIds);
+
+        // Hitung total keseluruhan
+        $total = $notSubmittedQuery->count();
+
+        // Hitung per divisi
+        $result = (clone $notSubmittedQuery)
+            ->selectRaw('division_id, COUNT(*) as total_not_submit')
+            ->groupBy('division_id')
+            ->with('division:id,nama')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'team' => $item->division->nama ?? '-',
+                    'total_not_submit' => $item->total_not_submit,
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'month' => Carbon::now()->translatedFormat('F Y'),
+            'total' => $total,
+            'byDivision' => $result,
+        ]);
+    }
+
+    public function notSign(Request $request)
+    {
+        $rifaDb = config('database.connections.rifa.database');
+        $monthInput = $request->input('month', Carbon::now()->format('Y-m'));
+
+        try {
+            [$year, $month] = explode('-', $monthInput);
+            $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+            $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth();
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Format bulan tidak valid. Gunakan format YYYY-MM.'], 400);
+        }
+
+        // Ambil total semua saran yang belum ditandatangani bulan ini
+        $total = Suggestion::whereNull('Id_User')
+            ->whereBetween('Date_First_Suggestion', [$startDate, $endDate])
+            ->count();
+
+        // Ambil total per divisi
+        $byDivision = Suggestion::selectRaw($rifaDb . '.divisions.nama as division, COUNT(*) as total_not_signed')
+            ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
+            ->leftJoin($rifaDb . '.divisions', $rifaDb . '.divisions.id', '=', $rifaDb . '.employees.division_id')
+            ->whereNull('suggestions.Id_User')
+            ->whereBetween('suggestions.Date_First_Suggestion', [$startDate, $endDate])
+            ->groupBy($rifaDb . '.divisions.nama')
+            ->orderBy($rifaDb . '.divisions.nama', 'asc')
+            ->get();
+
+        return response()->json([
+            'month' => Carbon::now()->translatedFormat('F Y'),
+            'total' => $total,
+            'byDivision' => $byDivision,
+        ]);
+    }
 }

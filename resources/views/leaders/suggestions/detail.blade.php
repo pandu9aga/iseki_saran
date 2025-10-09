@@ -5,7 +5,7 @@
         <div class="card table-card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h4 class="text-primary">Detail Saran</h4>
-                <a href="{{ route('leader.suggestions.export', $suggestion->Id_Suggestion) }}" class="btn btn-success btn-sm">
+                <a href="{{ route('leader.suggestion.export', $suggestion->Id_Suggestion) }}" class="btn btn-success btn-sm">
                     <i class="material-icons-two-tone text-white" style="font-size:16px;">download</i> Export Excel
                 </a>
             </div>

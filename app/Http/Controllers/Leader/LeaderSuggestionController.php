@@ -24,7 +24,22 @@ class LeaderSuggestionController extends Controller
         $Id_User = session('Id_User');
         $user = User::find($Id_User);
 
-        return view('leaders.suggestions.index', compact('page', 'user'));
+        $currentDate = Carbon::now();
+        $monthInput = $currentDate->format('Y-m');
+
+        return view('leaders.suggestions.index', compact('page', 'user', 'monthInput'));
+    }
+
+    public function filter(Request $request)
+    {
+        $page = "suggestion";
+
+        $Id_User = session('Id_User');
+        $user = User::find($Id_User);
+
+        $monthInput = $request->input('Month');
+
+        return view('leaders.suggestions.index', compact('page', 'user', 'monthInput'));
     }
 
     public function getSuggestions()
@@ -137,6 +152,115 @@ class LeaderSuggestionController extends Controller
                     </button>
                 ';
             })
+            ->rawColumns([
+                'Status_Suggestion',
+                'Score_A_Suggestion',
+                'Score_B_Suggestion',
+                'Acceptance_First_Suggestion',
+                'Acceptance_Last_Suggestion',
+                'action'
+            ])
+            ->make(true);
+    }
+
+    public function getSuggestionsMonth(Request $request)
+    {
+        $rifaDb = config('database.connections.rifa.database');
+
+        // Ambil bulan dari request (format: yyyy-mm)
+        $monthInput = $request->input('month'); // contoh: 2025-09
+
+        $query = Suggestion::select([
+            'suggestions.Id_Suggestion',
+            'suggestions.Id_Member',
+            'suggestions.Team_Suggestion',
+            'suggestions.Theme_Suggestion',
+            'suggestions.Date_First_Suggestion',
+            'suggestions.Date_Last_Suggestion',
+            'suggestions.Status_Suggestion',
+            'suggestions.Content_Suggestion',
+            'suggestions.Improvement_Suggestion',
+            'suggestions.Content_Photos_Suggestion',
+            'suggestions.Improvement_Photos_Suggestion',
+            'suggestions.Score_A_Suggestion',
+            'suggestions.Score_B_Suggestion',
+            'suggestions.Comment_Suggestion',
+            'suggestions.Id_User',
+            'suggestions.Acceptance_First_Suggestion',
+            'suggestions.Acceptance_Last_Suggestion',
+            $rifaDb . '.employees.nama as member_nama',
+            'users.Name_User as user_name',
+        ])
+            ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
+            ->leftJoin('users', 'users.Id_User', '=', 'suggestions.Id_User')
+            ->orderBy($rifaDb . '.employees.nik', 'asc')
+            ->orderBy('suggestions.Date_First_Suggestion', 'asc');
+
+        // Jika ada filter bulan
+        if ($monthInput) {
+            try {
+                // Ubah ke date range
+                [$year, $month] = explode('-', $monthInput);
+                $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+                $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth();
+
+                // Filter sesuai range tanggal
+                $query->whereBetween('suggestions.Date_First_Suggestion', [$startDate, $endDate]);
+            } catch (\Exception $e) {
+                // Jika format bulan salah, abaikan filter
+            }
+        }
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->editColumn('Status_Suggestion', function ($row) {
+                return $row->Status_Suggestion == 1
+                    ? '<span class="badge bg-success">Sudah Selesai</span>'
+                    : '<span class="badge bg-warning text-dark">Belum Selesai</span>';
+            })
+            ->editColumn('Score_A_Suggestion', function ($row) {
+                if ($row->Score_A_Suggestion === null) return '';
+                $map = [
+                    0 => 0, 1 => 600, 2 => 1200, 3 => 3600, 4 => 9000,
+                    5 => 15000, 6 => 21000, 7 => 30000, 8 => 39000, 9 => 48000,
+                    10 => 60000, 11 => 72000, 12 => 84000, 13 => 96000, 14 => 105000, 15 => 129000,
+                ];
+                $val = $row->Score_A_Suggestion;
+                $converted = $map[$val] ?? 0;
+                return "{$val} = Rp " . number_format($converted, 0, ',', '.') . " rb/tahun";
+            })
+            ->editColumn('Score_B_Suggestion', function ($row) {
+                if (!$row->Score_B_Suggestion) return '';
+                $scores = json_decode($row->Score_B_Suggestion, true);
+                if (!is_array($scores)) return '';
+                $parts = [];
+                foreach (['kreatifitas', 'ide', 'usaha'] as $key) {
+                    if (isset($scores[$key])) {
+                        $parts[] = ucfirst($key) . ': ' . $scores[$key];
+                    }
+                }
+                return implode(', ', $parts);
+            })
+            ->editColumn('Acceptance_First_Suggestion', fn($row) =>
+                $row->Acceptance_First_Suggestion !== null
+                    ? str_pad($row->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT)
+                    : ''
+            )
+            ->editColumn('Acceptance_Last_Suggestion', fn($row) =>
+                $row->Acceptance_Last_Suggestion !== null
+                    ? str_pad($row->Acceptance_Last_Suggestion, 5, '0', STR_PAD_LEFT)
+                    : ''
+            )
+            ->addColumn('action', fn($row) => '
+                <a href="' . route('leader.suggestion.show', $row->Id_Suggestion) . '" class="btn btn-sm btn-primary">
+                    <span class="pc-micon"><i class="material-icons-two-tone text-white">edit</i></span>
+                </a>
+                <button class="btn btn-sm btn-danger delete-btn" 
+                        data-id="' . $row->Id_Suggestion . '" 
+                        data-name="' . $row->Content_Suggestion . '">
+                    <span class="pc-micon"><i class="material-icons-two-tone text-white">delete</i></span>
+                </button>
+            ')
             ->rawColumns([
                 'Status_Suggestion',
                 'Score_A_Suggestion',
@@ -701,5 +825,207 @@ class LeaderSuggestionController extends Controller
         }, $filename, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
+    }
+
+    public function notSubmit()
+    {
+        $page = "not-submit";
+
+        $Id_User = session('Id_User');
+        $user = User::find($Id_User);
+
+        $currentDate = Carbon::now();
+        $monthInput = $currentDate->format('Y-m');
+
+        return view('leaders.suggestions.not_submit', compact('page', 'user', 'monthInput'));
+    }
+
+    public function notSubmitFilter(Request $request)
+    {
+        $page = "not-submit";
+
+        $Id_User = session('Id_User');
+        $user = User::find($Id_User);
+
+        $monthInput = $request->input('Month');
+
+        return view('leaders.suggestions.not_submit', compact('page', 'user', 'monthInput'));
+    }
+
+    public function notSubmitData(Request $request)
+    {
+        $monthInput = $request->query('Month', Carbon::now()->format('Y-m'));
+
+        // Ambil ID member yang sudah submit bulan tersebut
+        $submittedIds = Suggestion::whereYear('Date_First_Suggestion', substr($monthInput, 0, 4))
+            ->whereMonth('Date_First_Suggestion', substr($monthInput, 5, 2))
+            ->pluck('Id_Member')
+            ->toArray();
+
+        // Query utama member
+        $query = Member::with('division')
+            ->whereNotIn('id', $submittedIds)
+            ->orderBy('nik', 'asc');
+
+        // Filter berdasarkan nama
+        if ($request->filled('name')) {
+            $query->where('nama', 'like', "%{$request->name}%");
+        }
+
+        // Filter berdasarkan NIK
+        if ($request->filled('nik')) {
+            $query->where('nik', 'like', "%{$request->nik}%");
+        }
+
+        // Filter berdasarkan team/division
+        if ($request->filled('team')) {
+            $query->whereHas('division', function ($q) use ($request) {
+                $q->where('nama', 'like', "%{$request->team}%");
+            });
+        }
+
+        // Kembalikan hasil ke DataTables
+        return DataTables::eloquent($query)
+            ->addIndexColumn()
+            ->addColumn('name', fn($row) => $row->nama)
+            ->addColumn('nik', fn($row) => $row->nik)
+            ->addColumn('team', fn($row) => $row->division?->nama ?? '-')
+            ->make(true);
+    }
+
+    public function notSign()
+    {
+        $page = "not-sign";
+
+        $Id_User = session('Id_User');
+        $user = User::find($Id_User);
+
+        $currentDate = Carbon::now();
+        $monthInput = $currentDate->format('Y-m');
+
+        return view('leaders.suggestions.not_sign', compact('page', 'user', 'monthInput'));
+    }
+
+    public function notSignFilter(Request $request)
+    {
+        $page = "not-sign";
+
+        $Id_User = session('Id_User');
+        $user = User::find($Id_User);
+
+        $monthInput = $request->input('Month');
+
+        return view('leaders.suggestions.not_sign', compact('page', 'user', 'monthInput'));
+    }
+
+    public function notSignData(Request $request)
+    {
+        $rifaDb = config('database.connections.rifa.database');
+
+        // Ambil bulan dari request (format: yyyy-mm)
+        $monthInput = $request->input('month'); // contoh: 2025-09
+
+        $query = Suggestion::select([
+            'suggestions.Id_Suggestion',
+            'suggestions.Id_Member',
+            'suggestions.Team_Suggestion',
+            'suggestions.Theme_Suggestion',
+            'suggestions.Date_First_Suggestion',
+            'suggestions.Date_Last_Suggestion',
+            'suggestions.Status_Suggestion',
+            'suggestions.Content_Suggestion',
+            'suggestions.Improvement_Suggestion',
+            'suggestions.Content_Photos_Suggestion',
+            'suggestions.Improvement_Photos_Suggestion',
+            'suggestions.Score_A_Suggestion',
+            'suggestions.Score_B_Suggestion',
+            'suggestions.Comment_Suggestion',
+            'suggestions.Id_User',
+            'suggestions.Acceptance_First_Suggestion',
+            'suggestions.Acceptance_Last_Suggestion',
+            $rifaDb . '.employees.nama as member_nama',
+            $rifaDb . '.employees.nik as member_nik',
+            'users.Name_User as user_name',
+        ])
+        ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
+        ->leftJoin('users', 'users.Id_User', '=', 'suggestions.Id_User')
+        ->whereNull('suggestions.Id_User')
+        ->orderBy($rifaDb . '.employees.nik', 'asc')
+        ->orderBy('suggestions.Date_First_Suggestion', 'asc');
+
+        // Jika ada filter bulan
+        if ($monthInput) {
+            try {
+                // Ubah ke date range
+                [$year, $month] = explode('-', $monthInput);
+                $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+                $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth();
+
+                // Filter sesuai range tanggal
+                $query->whereBetween('suggestions.Date_First_Suggestion', [$startDate, $endDate]);
+            } catch (\Exception $e) {
+                // Jika format bulan salah, abaikan filter
+            }
+        }
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->editColumn('Status_Suggestion', function ($row) {
+                return $row->Status_Suggestion == 1
+                    ? '<span class="badge bg-success">Sudah Selesai</span>'
+                    : '<span class="badge bg-warning text-dark">Belum Selesai</span>';
+            })
+            ->editColumn('Score_A_Suggestion', function ($row) {
+                if ($row->Score_A_Suggestion === null) return '';
+                $map = [
+                    0 => 0, 1 => 600, 2 => 1200, 3 => 3600, 4 => 9000,
+                    5 => 15000, 6 => 21000, 7 => 30000, 8 => 39000, 9 => 48000,
+                    10 => 60000, 11 => 72000, 12 => 84000, 13 => 96000, 14 => 105000, 15 => 129000,
+                ];
+                $val = $row->Score_A_Suggestion;
+                $converted = $map[$val] ?? 0;
+                return "{$val} = Rp " . number_format($converted, 0, ',', '.') . " rb/tahun";
+            })
+            ->editColumn('Score_B_Suggestion', function ($row) {
+                if (!$row->Score_B_Suggestion) return '';
+                $scores = json_decode($row->Score_B_Suggestion, true);
+                if (!is_array($scores)) return '';
+                $parts = [];
+                foreach (['kreatifitas', 'ide', 'usaha'] as $key) {
+                    if (isset($scores[$key])) {
+                        $parts[] = ucfirst($key) . ': ' . $scores[$key];
+                    }
+                }
+                return implode(', ', $parts);
+            })
+            ->editColumn('Acceptance_First_Suggestion', fn($row) =>
+                $row->Acceptance_First_Suggestion !== null
+                    ? str_pad($row->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT)
+                    : ''
+            )
+            ->editColumn('Acceptance_Last_Suggestion', fn($row) =>
+                $row->Acceptance_Last_Suggestion !== null
+                    ? str_pad($row->Acceptance_Last_Suggestion, 5, '0', STR_PAD_LEFT)
+                    : ''
+            )
+            ->addColumn('action', fn($row) => '
+                <a href="' . route('leader.suggestion.show', $row->Id_Suggestion) . '" class="btn btn-sm btn-primary">
+                    <span class="pc-micon"><i class="material-icons-two-tone text-white">edit</i></span>
+                </a>
+                <button class="btn btn-sm btn-danger delete-btn" 
+                        data-id="' . $row->Id_Suggestion . '" 
+                        data-name="' . $row->Content_Suggestion . '">
+                    <span class="pc-micon"><i class="material-icons-two-tone text-white">delete</i></span>
+                </button>
+            ')
+            ->rawColumns([
+                'Status_Suggestion',
+                'Score_A_Suggestion',
+                'Score_B_Suggestion',
+                'Acceptance_First_Suggestion',
+                'Acceptance_Last_Suggestion',
+                'action'
+            ])
+            ->make(true);
     }
 }

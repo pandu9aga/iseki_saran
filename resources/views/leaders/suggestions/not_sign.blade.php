@@ -4,7 +4,7 @@
     <div class="col-sm-12">
         <div class="card table-card">
             <div class="card-header d-flex justify-content-between align-items-centerr">
-                <h4 class="text-primary">Data Saran</h4>
+                <h4 class="text-primary">Data Saran Belum Dinilai</h4>
             </div>
             <div class="col-xl-3 col-sm-6 m-3">
                 <div class="card shadow">
@@ -12,7 +12,7 @@
                         <div class="text-primary mb-1">
                             <b>Pilih Bulan</b>
                         </div>
-                        <form class="user" action="{{ route('leader.suggestion.filter') }}" method="GET">
+                        <form class="user" action="{{ route('leader.suggestion.notSign.filter') }}" method="GET">
                             @csrf
                             <div class="row d-flex align-items-center">
                                 <div class="col-8">
@@ -41,15 +41,6 @@
                                 <th class="text-primary text-center">Foto <br> Permasalahan</th>
                                 <th class="text-primary text-center">Perbaikan</th>
                                 <th class="text-primary text-center">Foto <br> Perbaikan</th>
-                                <th class="text-primary text-center">Skor A</th>
-                                <th class="text-primary text-center">Skor B</th>
-                                <th class="text-primary text-center">Komentar</th>
-                                <th class="text-primary text-center">Leader</th>
-                                <th class="text-primary text-center">Status</th>
-                                <th class="text-primary text-center">Tema</th>
-                                <th class="text-primary text-center">No <br> Penerimaan <br> Awal</th>
-                                <th class="text-primary text-center">No <br> Penerimaan <br> Akhir</th>
-                                <th class="text-primary text-center">Tanggal <br> Penyerahan <br> Akhir</th>
                                 <th class="text-primary text-center">Action</th>
                             </tr>
                         </thead>
@@ -85,7 +76,7 @@
                 pageLength: 50,
                 // order: [[3, 'desc']],
                 ajax: {
-                    url: '{{ route('leader.suggestions.data.month') }}',
+                    url: '{{ route('leader.suggestion.notSign.data') }}',
                     type: 'GET',
                     data: function(d) {
                         d.month = $('#monthFilter').val() || '{{ $monthInput }}';
@@ -188,46 +179,6 @@
                             }
                             return '';
                         }
-                    },
-                    {
-                        data: 'Score_A_Suggestion',
-                        name: 'Score_A_Suggestion'
-                    },
-                    {
-                        data: 'Score_B_Suggestion',
-                        name: 'Score_B_Suggestion'
-                    },
-                    {
-                        data: 'Comment_Suggestion',
-                        name: 'Comment_Suggestion',
-                        render: function(data, type, row) {
-                            if (!data) return '';
-                            return data.length > 20 ? data.substr(0, 20) + '...' : data;
-                        }
-                    },
-                    {
-                        data: 'user_name',
-                        name: 'users.Name_User'
-                    },
-                    {
-                        data: 'Status_Suggestion',
-                        name: 'Status_Suggestion'
-                    },
-                    {
-                        data: 'Theme_Suggestion',
-                        name: 'Theme_Suggestion'
-                    },
-                    {
-                        data: 'Acceptance_First_Suggestion',
-                        name: 'Acceptance_First_Suggestion'
-                    },
-                    {
-                        data: 'Acceptance_Last_Suggestion',
-                        name: 'Acceptance_Last_Suggestion'
-                    },
-                    {
-                        data: 'Date_Last_Suggestion',
-                        name: 'Date_Last_Suggestion'
                     },
                     {
                         data: 'action',

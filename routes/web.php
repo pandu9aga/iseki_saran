@@ -28,10 +28,15 @@ Route::middleware(LeaderMiddleware::class)->group(function () {
     Route::delete('/user/delete/{id}', [UserController::class, 'destroy'])->name('leader.users.destroy');
 
     Route::get('/leader/suggestion', [LeaderSuggestionController::class, 'index'])->name('leader.suggestion');
+    Route::get('/leader/suggestion/filter', [LeaderSuggestionController::class, 'filter'])->name('leader.suggestion.filter');
+    Route::get('/leader/suggestion/not-submit', [LeaderSuggestionController::class, 'notSubmit'])->name('leader.suggestion.notSubmit');
+    Route::get('/leader/suggestion/not-submit/filter', [LeaderSuggestionController::class, 'notSubmitFilter'])->name('leader.suggestion.notSubmit.filter');
+    Route::get('/leader/suggestion/not-sign', [LeaderSuggestionController::class, 'notSign'])->name('leader.suggestion.notSign');
+    Route::get('/leader/suggestion/not-sign/filter', [LeaderSuggestionController::class, 'notSignFilter'])->name('leader.suggestion.notSign.filter');
+    Route::delete('/leader/suggestion/delete/{Id_Suggestion}', [LeaderSuggestionController::class, 'destroy'])->name('leader.suggestion.destroy');
     Route::get('/leader/suggestion/{id}', [LeaderSuggestionController::class, 'show'])->name('leader.suggestion.show');
     Route::post('/leader/suggestion/{id}/update-field', [LeaderSuggestionController::class, 'updateField'])->name('leader.suggestion.updateField');
-    Route::delete('/leader/suggestion/delete/{Id_Suggestion}', [LeaderSuggestionController::class, 'destroy'])->name('leader.suggestion.destroy');
-    Route::get('/leader/suggestions/{id}/export', [LeaderSuggestionController::class, 'export'])->name('leader.suggestions.export');
+    Route::get('/leader/suggestion/{id}/export', [LeaderSuggestionController::class, 'export'])->name('leader.suggestion.export');
 
     Route::get('/member', [LeaderMemberController::class, 'index'])->name('member');
 });
