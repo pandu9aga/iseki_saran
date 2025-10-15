@@ -27,6 +27,9 @@
                         </form>
                     </div>
                 </div>
+                <a href="{{ route('leader.suggestion.exportAll') }}" class="btn btn-success btn-sm">
+                    <i class="material-icons-two-tone text-white" style="font-size:16px;">download</i> Export Excel All
+                </a>
             </div>
             <div class="card-body p-3">
                 <div class="table-responsive text-nowrap">

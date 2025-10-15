@@ -37,6 +37,7 @@ Route::middleware(LeaderMiddleware::class)->group(function () {
     Route::get('/leader/suggestion/{id}', [LeaderSuggestionController::class, 'show'])->name('leader.suggestion.show');
     Route::post('/leader/suggestion/{id}/update-field', [LeaderSuggestionController::class, 'updateField'])->name('leader.suggestion.updateField');
     Route::get('/leader/suggestion/{id}/export', [LeaderSuggestionController::class, 'export'])->name('leader.suggestion.export');
+    Route::get('/suggestions/export-all', [LeaderSuggestionController::class, 'exportAll'])->name('leader.suggestion.exportAll');
 
     Route::get('/member', [LeaderMemberController::class, 'index'])->name('member');
 });
