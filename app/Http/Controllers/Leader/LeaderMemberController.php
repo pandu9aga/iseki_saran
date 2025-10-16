@@ -16,7 +16,7 @@ class LeaderMemberController extends Controller
         $user = User::find($Id_User);
 
         // Ambil semua member dari database RIFA
-        $members = Member::with('division')->orderBy('nik')->get();
+        $members = Member::with('division')->whereNull('deleted_at')->orderBy('nik')->get();
         return view('leaders.members.index', compact('page', 'user', 'members'));
     }
 }
