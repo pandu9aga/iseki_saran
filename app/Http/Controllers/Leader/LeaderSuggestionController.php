@@ -1030,37 +1030,53 @@ class LeaderSuggestionController extends Controller
             ->make(true);
     }
 
-    public function exportAll()
+    public function exportAll(Request $request)
     {
-        // Ambil semua suggestion dengan Date_First_Suggestion di bulan ini
+        // Set timeout lama (300 detik = 5 menit, atau sesuaikan kebutuhan)
+        set_time_limit(900);
+
+        $monthInput = $request->get('Month', now()->format('Y-m'));
+        $year = date('Y', strtotime($monthInput));
+        $month = date('m', strtotime($monthInput));
+
         $suggestions = Suggestion::with(['user', 'member'])
-            ->whereYear('Date_First_Suggestion', Carbon::now()->year)
-            ->whereMonth('Date_First_Suggestion', Carbon::now()->month)
+            ->whereYear('Date_First_Suggestion', $year)
+            ->whereMonth('Date_First_Suggestion', $month)
             ->whereNotNull('Id_User')
-            ->get();
+            ->get()
+            ->sortBy('member.nama');
 
         if ($suggestions->isEmpty()) {
-            return response()->json(['message' => 'Tidak ada data untuk bulan ini.'], 404);
+            return redirect()->back()->with('error', 'Tidak ada data untuk bulan ini.');
         }
 
-        // Buat spreadsheet baru
         $spreadsheet = new Spreadsheet();
-        $spreadsheet->removeSheetByIndex(0); // Hapus sheet default
+        $spreadsheet->removeSheetByIndex(0);
 
-        $tmpFiles = []; // Menyimpan file sementara untuk dihapus nanti
+        $tmpFiles = [];
+        $usedNames = [];
 
         foreach ($suggestions as $suggestion) {
-            // Load template untuk setiap sheet
+            $baseName = trim($suggestion->member->nama ?? 'Tanpa_Nama');
+            $cleanName = preg_replace('/[\/\?\*\[\]:\\\\]/', '_', substr($baseName, 0, 15));
+            $sheetName = $cleanName;
+
+            $counter = 1;
+            while (in_array($sheetName, $usedNames)) {
+                $sheetName = $cleanName . '_' . $counter;
+                $counter++;
+            }
+            $usedNames[] = $sheetName;
+
             $templatePath = storage_path('app/templates/saran_perbaikan.xlsx');
             $templateSpreadsheet = IOFactory::load($templatePath);
 
-            // Hapus defined names dari template (opsional, sesuai kebutuhan)
             foreach ($templateSpreadsheet->getDefinedNames() as $definedName) {
                 $templateSpreadsheet->removeDefinedName($definedName->getName());
             }
 
             $sheet = $templateSpreadsheet->getActiveSheet();
-            $sheet->setTitle('Saran_' . $suggestion->Id_Suggestion); // Nama sheet unik
+            $sheet->setTitle($sheetName);
 
             // Mapping data ke cell
             $sheet->setCellValue('K4', $suggestion->Date_First_Suggestion ?? '');
@@ -1221,21 +1237,23 @@ class LeaderSuggestionController extends Controller
             $spreadsheet->addExternalSheet($sheet);
         }
 
-        // Siapkan writer dan response
         $writer = new Xlsx($spreadsheet);
         $filename = 'Saran_Perbaikan_Bulan_' . now()->format('m_Y') . '.xlsx';
 
-        return response()->streamDownload(function () use ($writer, $tmpFiles) {
-            $writer->save('php://output');
-            // Hapus semua file sementara
-            foreach ($tmpFiles as $file) {
-                if (file_exists($file)) {
-                    @unlink($file);
+        try {
+            return response()->streamDownload(function () use ($writer, $tmpFiles) {
+                $writer->save('php://output');
+                foreach ($tmpFiles as $file) {
+                    if (file_exists($file)) {
+                        @unlink($file);
+                    }
                 }
-            }
-        }, $filename, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ]);
+            }, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat membuat file: ' . $e->getMessage());
+        }
     }
 
     private function createCircleImage($r, $g, $b, $suffix, $type = 'circle')

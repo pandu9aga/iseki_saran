@@ -27,9 +27,15 @@
                         </form>
                     </div>
                 </div>
-                <a href="{{ route('leader.suggestion.exportAll') }}" class="btn btn-success btn-sm">
+                <a href="{{ route('leader.suggestion.exportAll', ['Month' => $monthInput]) }}" class="btn btn-success btn-sm">
                     <i class="material-icons-two-tone text-white" style="font-size:16px;">download</i> Export Excel All
                 </a>
+                @if(session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                        {{ session('error') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
             </div>
             <div class="card-body p-3">
                 <div class="table-responsive text-nowrap">
