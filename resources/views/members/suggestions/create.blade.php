@@ -418,19 +418,71 @@ btnDelete.onclick = () => {
 function openFileSelectAndEdit(index) {
   currentEditIndex = index;
 
+  // Buat container untuk pilihan
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.top = '50%';
+  container.style.left = '50%';
+  container.style.transform = 'translate(-50%, -50%)';
+  container.style.zIndex = '10000';
+  container.style.backgroundColor = 'white';
+  container.style.padding = '20px';
+  container.style.borderRadius = '8px';
+  container.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+
+  // Tombol gallery
+  const galleryBtn = document.createElement('button');
+  galleryBtn.textContent = 'Gallery';
+  galleryBtn.style.margin = '5px';
+  galleryBtn.style.padding = '10px 20px';
+  galleryBtn.onclick = () => {
+    document.body.removeChild(container);
+    openFileInput(false);
+  };
+
+  // Tombol camera
+  const cameraBtn = document.createElement('button');
+  cameraBtn.textContent = 'Camera';
+  cameraBtn.style.margin = '5px';
+  cameraBtn.style.padding = '10px 20px';
+  cameraBtn.onclick = () => {
+    document.body.removeChild(container);
+    openFileInput(true);
+  };
+
+  // Tombol batal
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.style.margin = '5px';
+  cancelBtn.style.padding = '10px 20px';
+  cancelBtn.onclick = () => {
+    document.body.removeChild(container);
+  };
+
+  container.appendChild(galleryBtn);
+  container.appendChild(cameraBtn);
+  container.appendChild(cancelBtn);
+  document.body.appendChild(container);
+}
+
+function openFileInput(useCamera) {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
-  input.capture = 'environment';
+  
+  if (useCamera) {
+    input.capture = 'environment';
+  } else {
+    delete input.capture;
+  }
+
   input.onchange = async e => {
     const file = e.target.files[0];
     if (!file) return;
 
     try {
-      // ✅ Resize gambar sebelum dimuat
       const resizedBlob = await resizeImage(file, 1280, 1280, 0.8);
       const resizedDataUrl = await blobToDataURL(resizedBlob);
-
       openTuiEditorWithImage(resizedDataUrl);
     } catch (err) {
       console.error('Resize error:', err);
