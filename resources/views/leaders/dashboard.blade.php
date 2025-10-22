@@ -29,6 +29,7 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="text-primary">Data Saran <span class="text-secondary" id="thisMonth"></span></h5>
             </div>
+            <b class="mx-4" style="font-size: 18px; color: grey;">Total: <span id="total-saran"></span></b>
             <div class="card-body p-2" style="max-width: 500px;">
                 <canvas id="suggestionChart"></canvas>
             </div>
@@ -157,6 +158,7 @@ fetch("{{ route('suggestion.stats') }}")
         let values = data.byTeam.map(item => item.total);
 
         let totalAll = values.reduce((a, b) => a + b, 0);
+        document.getElementById("total-saran").innerText = totalAll;
 
         new Chart(ctx, {
             type: 'bar',
@@ -185,13 +187,13 @@ fetch("{{ route('suggestion.stats') }}")
                         display: true,
                         text: 'Jumlah Saran per Divisi'
                     },
-                    subtitle: {
-                        display: true,
-                        text: 'Total semua saran: ' + totalAll,
-                        padding: { bottom: 10 },
-                        color: 'black',
-                        font: { weight: 'bold', size: 14 }
-                    },
+                    // subtitle: {
+                    //     display: true,
+                    //     text: 'Total semua saran: ' + totalAll,
+                    //     padding: { bottom: 10 },
+                    //     color: 'black',
+                    //     font: { weight: 'bold', size: 14 }
+                    // },
                     legend: {
                         position: 'bottom',
                         labels: {

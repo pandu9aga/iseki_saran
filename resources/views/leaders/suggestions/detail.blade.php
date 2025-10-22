@@ -161,7 +161,6 @@
                                                 15 => '129000 rb/tahun',
                                             ];
 
-                                            // Bagi menjadi 3 kolom, masing-masing 5 item
                                             $chunks = array_chunk($labels, 5, true);
                                         @endphp
 
@@ -169,7 +168,7 @@
                                             <div class="col">
                                                 @foreach ($chunk as $i => $label)
                                                     <label class="d-block">
-                                                        <input type="radio" name="Score_A_Suggestion"
+                                                        <input type="radio" name="Score_A_Suggestion" id="score_a_{{ $i }}"
                                                             value="{{ $i }}" data-field="Score_A_Suggestion"
                                                             {{ $suggestion->Score_A_Suggestion == $i ? 'checked' : '' }}>
                                                         {{ $i }} = Rp {{ $label }}
@@ -251,34 +250,40 @@
                                 <th>Komentar</th>
                                 <td>
                                     <div class="d-flex flex-column gap-2">
-                                        @php
-                                            $options = [
-                                                'akan di tunggu',
-                                                'sangat memudahkan pekerjaan',
-                                                'meningkatkan keselamatan',
-                                                'meningkatkan kualitas',
-                                                'lingkungan kerja tambah nyaman',
-                                            ];
-                                        @endphp
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                @php
+                                                    $options = [
+                                                        'akan dijadwalkan perbaikannya',
+                                                        'sangat memudahkan pekerjaan',
+                                                        'meningkatkan keselamatan',
+                                                        'meningkatkan kualitas',
+                                                        'lingkungan kerja tambah nyaman',
+                                                        'saran anda ditolak',
+                                                    ];
+                                                @endphp
 
-                                        @foreach ($options as $opt)
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="comment_option"
-                                                    value="{{ $opt }}" data-field="Comment_Suggestion"
-                                                    {{ $suggestion->Comment_Suggestion == $opt ? 'checked' : '' }}>
-                                                <label class="form-check-label">{{ ucfirst($opt) }}</label>
+                                                @foreach ($options as $opt)
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="comment_option"
+                                                            value="{{ $opt }}" data-field="Comment_Suggestion"
+                                                            {{ $suggestion->Comment_Suggestion == $opt ? 'checked' : '' }}>
+                                                        <label class="form-check-label">{{ ucfirst($opt) }}</label>
+                                                    </div>
+                                                @endforeach
                                             </div>
-                                        @endforeach
-
-                                        <div class="form-check d-flex align-items-center">
-                                            <input class="form-check-input me-2" type="radio" name="comment_option"
-                                                value="custom"
-                                                {{ $suggestion->Comment_Suggestion && !in_array($suggestion->Comment_Suggestion, $options) ? 'checked' : '' }}
-                                                data-field="Comment_Suggestion">
-                                            <label class="form-check-label me-2">Lainnya:</label>
-                                            <input type="text" class="form-control form-control-sm w-auto"
-                                                name="comment_custom" placeholder="Tulis komentar..."
-                                                value="{{ $suggestion->Comment_Suggestion && !in_array($suggestion->Comment_Suggestion, $options) ? $suggestion->Comment_Suggestion : '' }}">
+                                            <div class="col-md-9">
+                                                <div class="form-check d-flex align-items-center">
+                                                    <input class="form-check-input me-2" type="radio" name="comment_option"
+                                                        value="custom"
+                                                        {{ $suggestion->Comment_Suggestion && !in_array($suggestion->Comment_Suggestion, $options) ? 'checked' : '' }}
+                                                        data-field="Comment_Suggestion">
+                                                    <label class="form-check-label me-2">Lainnya:</label>
+                                                    <textarea class="form-control form-control-sm mt-1"
+                                                        name="comment_custom" placeholder="Tulis komentar..."
+                                                        rows="3">{{ $suggestion->Comment_Suggestion && !in_array($suggestion->Comment_Suggestion, $options) ? $suggestion->Comment_Suggestion : '' }}</textarea>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
@@ -461,6 +466,24 @@
             // Scroll ke tengah
             const container = document.querySelector('.preview-container');
             container.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        let lastCheckedRadio = null;
+
+        const scoreARadios = document.querySelectorAll('input[name="Score_A_Suggestion"]');
+        scoreARadios.forEach(radio => {
+            radio.addEventListener('click', function(e) {
+                if (this === lastCheckedRadio) {
+                    this.checked = false;
+                    lastCheckedRadio = null;
+                    updateField(this.dataset.field, null);
+                } else {
+                    lastCheckedRadio = this;
+                    updateField(this.dataset.field, this.value);
+                }
+            });
         });
     });
     </script>

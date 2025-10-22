@@ -400,6 +400,26 @@ class LeaderSuggestionController extends Controller
             ]);
         }
 
+        // Tambahkan validasi untuk field Score_A_Suggestion agar bisa null
+        if ($field === 'Score_A_Suggestion') {
+            // Jika value null atau kosong, set ke null
+            if ($request->value === null || $request->value === '' || $request->value === 'null') {
+                $suggestion->$field = null;
+            } else {
+                $suggestion->$field = $request->value;
+            }
+            $suggestion->save();
+
+            $formatted = $suggestion->score_a_formatted;
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Nilai skor A berhasil diperbarui.',
+                'field'   => $field,
+                'value'   => $formatted
+            ]);
+        }
+
         // ---------------- Score B (array input) ----------------
         if ($field === 'Score_B_Suggestion') {
             $value = $request->input('value');
@@ -814,7 +834,7 @@ class LeaderSuggestionController extends Controller
 
         // Output file Excel
         $writer = new Xlsx($spreadsheet);
-        $filename = 'Saran_Perbaikan_' . $suggestion->Id_Suggestion . '.xlsx';
+        $filename = 'Saran_Perbaikan_' . $suggestion->member->nama . '_' . $suggestion->Id_Suggestion . '.xlsx';
 
         return response()->streamDownload(function () use ($writer, $tmpFiles) {
             $writer->save('php://output');
