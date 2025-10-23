@@ -160,6 +160,15 @@ fetch("{{ route('suggestion.stats') }}")
         let totalAll = values.reduce((a, b) => a + b, 0);
         document.getElementById("total-saran").innerText = totalAll;
 
+        // Mapping warna statis berdasarkan nama team
+        let colorMap = {
+            'Assembling': 'rgba(255, 99, 132, 0.9)',
+            'Painting': 'rgba(54, 162, 235, 0.9)',
+            'DST': 'rgba(255, 206, 86, 0.9)'
+        };
+
+        let backgroundColors = labels.map(team => colorMap[team] || 'rgba(153, 102, 255, 0.9)'); // Default jika tidak ditemukan
+
         new Chart(ctx, {
             type: 'bar',
             data: {
@@ -167,14 +176,7 @@ fetch("{{ route('suggestion.stats') }}")
                 datasets: [{
                     label: 'Jumlah Saran',
                     data: values,
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.9)',
-                        'rgba(54, 162, 235, 0.9)',
-                        'rgba(255, 206, 86, 0.9)',
-                        'rgba(75, 192, 192, 0.9)',
-                        'rgba(153, 102, 255, 0.9)',
-                        'rgba(255, 159, 64, 0.9)'
-                    ],
+                    backgroundColor: backgroundColors,
                     borderColor: 'white',
                     borderWidth: 1
                 }]
@@ -239,19 +241,13 @@ fetch("{{ route('notSubmit.stats') }}")
         let labels = data.byDivision.map(item => item.team);
         let values = data.byDivision.map(item => item.total_not_submit);
 
-        // warna random beda-beda (bisa ditambah kalau divisinya banyak)
-        let backgroundColors = [
-            'rgba(255, 99, 132, 0.9)',
-            'rgba(54, 162, 235, 0.9)',
-            'rgba(255, 206, 86, 0.9)',
-            'rgba(75, 192, 192, 0.9)',
-            'rgba(153, 102, 255, 0.9)',
-            'rgba(255, 159, 64, 0.9)',
-            'rgba(100, 181, 246, 0.9)',
-            'rgba(255, 138, 101, 0.9)',
-            'rgba(174, 213, 129, 0.9)',
-            'rgba(240, 98, 146, 0.9)'
-        ];
+        let colorMap = {
+            'Assembling': 'rgba(255, 99, 132, 0.9)',
+            'Painting': 'rgba(54, 162, 235, 0.9)',
+            'DST': 'rgba(255, 206, 86, 0.9)'
+        };
+
+        let backgroundColors = labels.map(team => colorMap[team] || 'rgba(153, 102, 255, 0.9)');
 
         // Plugin untuk menampilkan total di tengah doughnut chart
         const centerText = {
@@ -278,7 +274,7 @@ fetch("{{ route('notSubmit.stats') }}")
                 datasets: [{
                     label: 'Belum Menyerahkan per Divisi',
                     data: values,
-                    backgroundColor: backgroundColors.slice(0, labels.length),
+                    backgroundColor: backgroundColors,
                     borderColor: '#fff',
                     borderWidth: 2
                 }]
@@ -329,19 +325,13 @@ fetch("{{ route('notSign.stats') }}")
         let labels = data.byDivision.map(item => item.division);
         let values = data.byDivision.map(item => item.total_not_signed);
 
-        // warna random beda-beda (bisa ditambah kalau divisinya banyak)
-        let backgroundColors = [
-            'rgba(255, 99, 132, 0.9)',
-            'rgba(54, 162, 235, 0.9)',
-            'rgba(255, 206, 86, 0.9)',
-            'rgba(75, 192, 192, 0.9)',
-            'rgba(153, 102, 255, 0.9)',
-            'rgba(255, 159, 64, 0.9)',
-            'rgba(100, 181, 246, 0.9)',
-            'rgba(255, 138, 101, 0.9)',
-            'rgba(174, 213, 129, 0.9)',
-            'rgba(240, 98, 146, 0.9)'
-        ];
+        let colorMap = {
+            'Assembling': 'rgba(255, 99, 132, 0.9)',
+            'Painting': 'rgba(54, 162, 235, 0.9)',
+            'DST': 'rgba(255, 206, 86, 0.9)'
+        };
+
+        let backgroundColors = labels.map(team => colorMap[team] || 'rgba(153, 102, 255, 0.9)');
 
         // Plugin untuk menampilkan total di tengah doughnut chart
         const centerText = {
@@ -368,7 +358,7 @@ fetch("{{ route('notSign.stats') }}")
                 datasets: [{
                     label: 'Belum Dinilai per Divisi',
                     data: values,
-                    backgroundColor: backgroundColors.slice(0, labels.length),
+                    backgroundColor: backgroundColors,
                     borderColor: '#fff',
                     borderWidth: 2
                 }]
