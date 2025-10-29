@@ -260,6 +260,7 @@
                                                         'meningkatkan kualitas',
                                                         'lingkungan kerja tambah nyaman',
                                                         'saran anda ditolak',
+                                                        'saran anda lumayan',
                                                     ];
                                                 @endphp
 
