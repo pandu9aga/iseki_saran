@@ -88,6 +88,13 @@
                             <span class="pc-mtext">Belum Dinilai</span>
                         </a>
                     </li>
+                    <li class="pc-item {{ $page === 'detail-per-saran' ? 'active' : '' }}">
+                        <a href="{{ route('leader.suggestion.detailPerSaran') }}" class="pc-link">
+                            <span class="pc-micon"><i class="ph ph-list-checks"></i></span>
+                            <span class="pc-mtext">Record Nilai</span>
+                        </a>
+                    </li>
+
                     <li class="pc-item pc-caption">
                         <label>Data</label>
                     </li>
@@ -118,7 +125,7 @@
         </div>
     </nav>
     <!-- [ Sidebar Menu ] end -->
-    
+
     <!-- [ Header Topbar ] start -->
     <header class="pc-header">
         <div class="m-header">

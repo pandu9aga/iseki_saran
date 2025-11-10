@@ -222,9 +222,22 @@ class LeaderSuggestionController extends Controller
             ->editColumn('Score_A_Suggestion', function ($row) {
                 if ($row->Score_A_Suggestion === null) return '';
                 $map = [
-                    0 => 0, 1 => 600, 2 => 1200, 3 => 3600, 4 => 9000,
-                    5 => 15000, 6 => 21000, 7 => 30000, 8 => 39000, 9 => 48000,
-                    10 => 60000, 11 => 72000, 12 => 84000, 13 => 96000, 14 => 105000, 15 => 129000,
+                    0 => 0,
+                    1 => 600,
+                    2 => 1200,
+                    3 => 3600,
+                    4 => 9000,
+                    5 => 15000,
+                    6 => 21000,
+                    7 => 30000,
+                    8 => 39000,
+                    9 => 48000,
+                    10 => 60000,
+                    11 => 72000,
+                    12 => 84000,
+                    13 => 96000,
+                    14 => 105000,
+                    15 => 129000,
                 ];
                 $val = $row->Score_A_Suggestion;
                 $converted = $map[$val] ?? 0;
@@ -242,12 +255,16 @@ class LeaderSuggestionController extends Controller
                 }
                 return implode(', ', $parts);
             })
-            ->editColumn('Acceptance_First_Suggestion', fn($row) =>
+            ->editColumn(
+                'Acceptance_First_Suggestion',
+                fn($row) =>
                 $row->Acceptance_First_Suggestion !== null
                     ? str_pad($row->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT)
                     : ''
             )
-            ->editColumn('Acceptance_Last_Suggestion', fn($row) =>
+            ->editColumn(
+                'Acceptance_Last_Suggestion',
+                fn($row) =>
                 $row->Acceptance_Last_Suggestion !== null
                     ? str_pad($row->Acceptance_Last_Suggestion, 5, '0', STR_PAD_LEFT)
                     : ''
@@ -968,11 +985,11 @@ class LeaderSuggestionController extends Controller
             $rifaDb . '.employees.nik as member_nik',
             'users.Name_User as user_name',
         ])
-        ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
-        ->leftJoin('users', 'users.Id_User', '=', 'suggestions.Id_User')
-        ->whereNull('suggestions.Id_User')
-        ->orderBy($rifaDb . '.employees.nik', 'asc')
-        ->orderBy('suggestions.Date_First_Suggestion', 'asc');
+            ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
+            ->leftJoin('users', 'users.Id_User', '=', 'suggestions.Id_User')
+            ->whereNull('suggestions.Id_User')
+            ->orderBy($rifaDb . '.employees.nik', 'asc')
+            ->orderBy('suggestions.Date_First_Suggestion', 'asc');
 
         // Jika ada filter bulan
         if ($monthInput) {
@@ -999,9 +1016,22 @@ class LeaderSuggestionController extends Controller
             ->editColumn('Score_A_Suggestion', function ($row) {
                 if ($row->Score_A_Suggestion === null) return '';
                 $map = [
-                    0 => 0, 1 => 600, 2 => 1200, 3 => 3600, 4 => 9000,
-                    5 => 15000, 6 => 21000, 7 => 30000, 8 => 39000, 9 => 48000,
-                    10 => 60000, 11 => 72000, 12 => 84000, 13 => 96000, 14 => 105000, 15 => 129000,
+                    0 => 0,
+                    1 => 600,
+                    2 => 1200,
+                    3 => 3600,
+                    4 => 9000,
+                    5 => 15000,
+                    6 => 21000,
+                    7 => 30000,
+                    8 => 39000,
+                    9 => 48000,
+                    10 => 60000,
+                    11 => 72000,
+                    12 => 84000,
+                    13 => 96000,
+                    14 => 105000,
+                    15 => 129000,
                 ];
                 $val = $row->Score_A_Suggestion;
                 $converted = $map[$val] ?? 0;
@@ -1019,12 +1049,16 @@ class LeaderSuggestionController extends Controller
                 }
                 return implode(', ', $parts);
             })
-            ->editColumn('Acceptance_First_Suggestion', fn($row) =>
+            ->editColumn(
+                'Acceptance_First_Suggestion',
+                fn($row) =>
                 $row->Acceptance_First_Suggestion !== null
                     ? str_pad($row->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT)
                     : ''
             )
-            ->editColumn('Acceptance_Last_Suggestion', fn($row) =>
+            ->editColumn(
+                'Acceptance_Last_Suggestion',
+                fn($row) =>
                 $row->Acceptance_Last_Suggestion !== null
                     ? str_pad($row->Acceptance_Last_Suggestion, 5, '0', STR_PAD_LEFT)
                     : ''
@@ -1181,9 +1215,22 @@ class LeaderSuggestionController extends Controller
 
             // === Lingkaran outline hitam berdasarkan Score_A_Suggestion ===
             $scoreMap = [
-                0  => 'E37', 1 => 'F37', 2 => 'G37', 3 => 'H37', 4 => 'I37',
-                5  => 'J37', 6 => 'K37', 7 => 'L37', 8 => 'M37', 9 => 'O37',
-                10 => 'Q37', 11 => 'S37', 12 => 'U37', 13 => 'W37', 14 => 'Y37', 15 => 'AA37',
+                0  => 'E37',
+                1 => 'F37',
+                2 => 'G37',
+                3 => 'H37',
+                4 => 'I37',
+                5  => 'J37',
+                6 => 'K37',
+                7 => 'L37',
+                8 => 'M37',
+                9 => 'O37',
+                10 => 'Q37',
+                11 => 'S37',
+                12 => 'U37',
+                13 => 'W37',
+                14 => 'Y37',
+                15 => 'AA37',
             ];
 
             if (!is_null($suggestion->Score_A_Suggestion) && isset($scoreMap[$suggestion->Score_A_Suggestion])) {
@@ -1343,5 +1390,136 @@ class LeaderSuggestionController extends Controller
                 }
             }
         }
+    }
+    // app/Http/Controllers/Leader/LeaderSuggestionController.php
+
+    // app/Http/Controllers/Leader/LeaderSuggestionController.php
+
+    public function detailPerSaran()
+    {
+        $page = "detail-per-saran";
+        $Id_User = session('Id_User');
+        $user = User::find($Id_User);
+        $currentDate = Carbon::now();
+        $monthInput = $currentDate->format('Y-m');
+        return view('leaders.suggestions.detail_per_saran', compact('page', 'user', 'monthInput'));
+    }
+
+    public function detailPerSaranData(Request $request)
+    {
+        $rifaDb = config('database.connections.rifa.database');
+        $monthInput = $request->input('month');
+
+        // Hitung total skor di SQL (Score_A + (kreatifitas + ide + usaha))
+        $query = Suggestion::select([
+            'suggestions.Id_Suggestion',
+            'suggestions.Id_Member',
+            'suggestions.Team_Suggestion',
+            'suggestions.Content_Suggestion',
+            'suggestions.Score_A_Suggestion',
+            'suggestions.Score_B_Suggestion',
+            DB::raw("COALESCE(suggestions.Score_A_Suggestion, 0) + COALESCE(
+            JSON_UNQUOTE(JSON_EXTRACT(suggestions.Score_B_Suggestion, '$.kreatifitas')), 0
+        ) + COALESCE(
+            JSON_UNQUOTE(JSON_EXTRACT(suggestions.Score_B_Suggestion, '$.ide')), 0
+        ) + COALESCE(
+            JSON_UNQUOTE(JSON_EXTRACT(suggestions.Score_B_Suggestion, '$.usaha')), 0
+        ) as total_score"),
+            $rifaDb . '.employees.nama as member_nama',
+            $rifaDb . '.employees.nik as member_nik',
+        ])
+            ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
+            ->leftJoin('users', 'users.Id_User', '=', 'suggestions.Id_User')
+            ->whereNotNull('suggestions.Id_User'); // hanya saran yang sudah dinilai
+
+        if ($monthInput) {
+            [$year, $month] = explode('-', $monthInput);
+            $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+            $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth();
+            $query->whereBetween('suggestions.Date_First_Suggestion', [$startDate, $endDate]);
+        }
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->editColumn('total_score', function ($row) {
+                // Konversi ke integer karena hasil DB raw bisa string
+                return (int) $row->total_score;
+            })
+            ->make(true);
+    }
+    public function exportDetailPerSaran(Request $request)
+    {
+        $rifaDb = config('database.connections.rifa.database');
+        $monthInput = $request->input('month', Carbon::now()->format('Y-m'));
+        [$year, $month] = explode('-', $monthInput);
+
+        $suggestions = Suggestion::select([
+            'suggestions.Id_Suggestion',
+            'suggestions.Team_Suggestion',
+            'suggestions.Content_Suggestion',
+            'suggestions.Score_A_Suggestion',
+            'suggestions.Score_B_Suggestion',
+            $rifaDb . '.employees.nama as member_nama',
+            $rifaDb . '.employees.nik as member_nik',
+        ])
+            ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
+            ->whereNotNull('suggestions.Id_User')
+            ->whereYear('suggestions.Date_First_Suggestion', $year)
+            ->whereMonth('suggestions.Date_First_Suggestion', $month)
+            ->get();
+
+        // Buat spreadsheet baru
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Detail Per Saran');
+
+        // Header
+        $headers = ['No', 'Nama Member', 'Total Skor', 'NIK', 'Team', 'Permasalahan'];
+        $sheet->fromArray($headers, null, 'A1');
+
+        // Styling header
+        $sheet->getStyle('A1:F1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:F1')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFD3D3D3');
+
+        // Isi data
+        $row = 2;
+        foreach ($suggestions as $index => $s) {
+            $scoreA = $s->Score_A_Suggestion ?? 0;
+            $scoreB = 0;
+            if ($s->Score_B_Suggestion) {
+                $scores = json_decode($s->Score_B_Suggestion, true);
+                if (is_array($scores)) {
+                    $scoreB = ($scores['kreatifitas'] ?? 0) + ($scores['ide'] ?? 0) + ($scores['usaha'] ?? 0);
+                }
+            }
+            $total = $scoreA + $scoreB;
+
+            $sheet->setCellValue('A' . $row, $index + 1);
+            $sheet->setCellValue('B' . $row, $s->member_nama ?? '-');
+            $sheet->setCellValue('C' . $row, $total);
+            $sheet->setCellValue('D' . $row, $s->member_nik ?? '-');
+            $sheet->setCellValue('E' . $row, $s->Team_Suggestion ?? '-');
+            $sheet->setCellValue('F' . $row, $s->Content_Suggestion ?? '-');
+
+            $row++;
+        }
+
+        // Auto-size kolom
+        foreach (['A', 'B', 'C', 'D', 'E', 'F'] as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Export
+        $filename = "Detail_Saran_Bulan_{$monthInput}.xlsx";
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(
+            fn() => $writer->save('php://output'),
+            $filename,
+            [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ]
+        );
     }
 }

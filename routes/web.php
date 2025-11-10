@@ -33,6 +33,9 @@ Route::middleware(LeaderMiddleware::class)->group(function () {
     Route::get('/leader/suggestion/not-submit/filter', [LeaderSuggestionController::class, 'notSubmitFilter'])->name('leader.suggestion.notSubmit.filter');
     Route::get('/leader/suggestion/not-sign', [LeaderSuggestionController::class, 'notSign'])->name('leader.suggestion.notSign');
     Route::get('/leader/suggestion/not-sign/filter', [LeaderSuggestionController::class, 'notSignFilter'])->name('leader.suggestion.notSign.filter');
+    Route::get('/leader/suggestion/detail-per-saran', [LeaderSuggestionController::class, 'detailPerSaran'])->name('leader.suggestion.detailPerSaran');
+    Route::get('/leader/suggestion/detail-per-saran/data', [LeaderSuggestionController::class, 'detailPerSaranData'])->name('leader.suggestion.detailPerSaran.data');
+    Route::get('/leader/suggestion/detail-per-saran/export', [LeaderSuggestionController::class, 'exportDetailPerSaran'])->name('leader.suggestion.detailPerSaran.export');
     Route::delete('/leader/suggestion/delete/{Id_Suggestion}', [LeaderSuggestionController::class, 'destroy'])->name('leader.suggestion.destroy');
     Route::get('/leader/suggestion/{id}', [LeaderSuggestionController::class, 'show'])->name('leader.suggestion.show');
     Route::post('/leader/suggestion/{id}/update-field', [LeaderSuggestionController::class, 'updateField'])->name('leader.suggestion.updateField');
