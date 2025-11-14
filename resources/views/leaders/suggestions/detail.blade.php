@@ -261,6 +261,10 @@
                                                         'lingkungan kerja tambah nyaman',
                                                         'saran anda ditolak',
                                                         'saran anda lumayan',
+                                                        'Saran anda bagus. -> Dear Leader tolong di jadwalkan pengerjaanya',
+                                                        'Terkait Hal ini, anda punya saran kek apa?',
+                                                        'Akan baik untuk keselamatan',
+                                                        'Akan baik untuk kualitas',
                                                     ];
                                                 @endphp
 
