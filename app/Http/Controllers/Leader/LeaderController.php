@@ -69,6 +69,7 @@ class LeaderController extends Controller
 
         // Ambil semua member yang belum submit
         $notSubmittedQuery = Member::with('division')
+            ->whereNull('deleted_at')
             ->whereNotIn('id', $submittedIds);
 
         // Hitung total keseluruhan

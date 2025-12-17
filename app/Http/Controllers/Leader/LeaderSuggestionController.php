@@ -902,6 +902,7 @@ class LeaderSuggestionController extends Controller
 
         // Query utama member
         $query = Member::with('division')
+            ->whereNull('deleted_at')
             ->whereNotIn('id', $submittedIds)
             ->orderBy('nik', 'asc');
 
@@ -1085,6 +1086,156 @@ class LeaderSuggestionController extends Controller
     }
 
     public function exportAll(Request $request)
+    {
+        set_time_limit(900);
+
+        $monthInput = $request->get('Month', now()->format('Y-m'));
+        $year  = date('Y', strtotime($monthInput));
+        $month = date('m', strtotime($monthInput));
+
+        // ==== Load template SEKALI ====
+        $templatePath = storage_path('app/templates/saran_perbaikan.xlsx');
+        $templateSpreadsheet = IOFactory::load($templatePath);
+        $templateSheet = $templateSpreadsheet->getActiveSheet();
+
+        foreach ($templateSpreadsheet->getDefinedNames() as $definedName) {
+            $templateSpreadsheet->removeDefinedName($definedName->getName());
+        }
+
+        $spreadsheet = new Spreadsheet();
+        $spreadsheet->removeSheetByIndex(0);
+
+        $usedNames = [];
+        $hasData = false;
+
+        Suggestion::with(['user', 'member'])
+            ->whereYear('Date_First_Suggestion', $year)
+            ->whereMonth('Date_First_Suggestion', $month)
+            ->whereNotNull('Id_User')
+            ->orderBy('Id_Suggestion')
+            ->chunk(10, function ($suggestions) use (
+                &$spreadsheet,
+                &$usedNames,
+                &$hasData,
+                $templateSheet
+            ) {
+                foreach ($suggestions as $suggestion) {
+                    $hasData = true;
+
+                    // ==== Sheet name aman ====
+                    $baseName  = trim($suggestion->member->nama ?? 'Tanpa_Nama');
+                    $cleanName = preg_replace('/[\/\?\*\[\]:\\\\]/', '_', substr($baseName, 0, 15));
+                    $sheetName = $cleanName;
+                    $i = 1;
+                    while (in_array($sheetName, $usedNames)) {
+                        $sheetName = $cleanName . '_' . $i++;
+                    }
+                    $usedNames[] = $sheetName;
+
+                    // ==== Clone template ====
+                    $sheet = clone $templateSheet;
+                    $sheet->setTitle($sheetName);
+
+                    // ==== Mapping data ====
+                    $sheet->setCellValue('K4',  $suggestion->Date_First_Suggestion);
+                    $sheet->setCellValue('AD4', $suggestion->Date_Last_Suggestion);
+                    $sheet->setCellValue('C5',  $suggestion->member->nik ?? '');
+                    $sheet->setCellValue('Q5',  $suggestion->Team_Suggestion ?? '');
+                    $sheet->setCellValue('Y5',  $suggestion->member->nama ?? '');
+                    $sheet->setCellValue('Q11', $suggestion->Theme_Suggestion ?? '');
+                    $sheet->setCellValue('B16', $suggestion->Content_Suggestion ?? '');
+                    $sheet->setCellValue('AG16', $suggestion->Improvement_Suggestion ?? '');
+                    $sheet->setCellValue('AF38', $suggestion->Comment_Suggestion ?? '');
+                    $sheet->setCellValue('BC39', $suggestion->user->Name_User ?? '');
+
+                    // ==== Theme (border pink) ====
+                    $themeMap = [
+                        'keselamatan' => 'C8', 'kualitas' => 'E8', 'cost' => 'G8',
+                        'waktu' => 'I8', 'lingkungan' => 'K8', 'moral' => 'M8',
+                        'fasilitas' => 'W15', 'mould jig' => 'AA15', 'set up' => 'AG15',
+                        'material' => 'AK15', 'metode' => 'AO15', 'informasi' => 'AS15',
+                    ];
+                    $theme = strtolower($suggestion->Theme_Suggestion ?? '');
+                    foreach ($themeMap as $key => $cell) {
+                        if (str_contains($theme, $key)) {
+                            $sheet->getStyle($cell)->applyFromArray([
+                                'borders' => [
+                                    'outline' => [
+                                        'borderStyle' => Border::BORDER_THICK,
+                                        'color' => ['rgb' => 'FF0097'],
+                                    ],
+                                ],
+                            ]);
+                            break;
+                        }
+                    }
+
+                    // ==== Status (border orange) ====
+                    if ($suggestion->Status_Suggestion !== null) {
+                        $cell = $suggestion->Status_Suggestion == 1 ? 'AN5' : 'AL5';
+                        $sheet->getStyle($cell)->applyFromArray([
+                            'borders' => [
+                                'outline' => [
+                                    'borderStyle' => Border::BORDER_THICK,
+                                    'color' => ['rgb' => 'D46D00'],
+                                ],
+                            ],
+                        ]);
+                    }
+
+                    // ==== Score A (border black) ====
+                    $scoreMap = [
+                        0=>'E37',1=>'F37',2=>'G37',3=>'H37',4=>'I37',5=>'J37',
+                        6=>'K37',7=>'L37',8=>'M37',9=>'O37',10=>'Q37',
+                        11=>'S37',12=>'U37',13=>'W37',14=>'Y37',15=>'AA37'
+                    ];
+                    if (isset($scoreMap[$suggestion->Score_A_Suggestion])) {
+                        $sheet->getStyle($scoreMap[$suggestion->Score_A_Suggestion])
+                            ->getBorders()->getOutline()
+                            ->setBorderStyle(Border::BORDER_THICK);
+                    }
+
+                    // ==== Score B ====
+                    if ($suggestion->Score_B_Suggestion) {
+                        $scoreB = json_decode($suggestion->Score_B_Suggestion, true);
+                        $mapB = [
+                            'kreatifitas' => ['Y42','Z42','AA42','AB42','AC42','AD42'],
+                            'ide'         => ['Y43','Z43','AA43','AB43','AC43','AD43'],
+                            'usaha'       => ['Y44','Z44','AA44','AB44','AC44','AD44'],
+                        ];
+                        foreach ($mapB as $key => $cells) {
+                            if (isset($scoreB[$key], $cells[$scoreB[$key]])) {
+                                $sheet->getStyle($cells[$scoreB[$key]])
+                                    ->getBorders()->getOutline()
+                                    ->setBorderStyle(Border::BORDER_THICK);
+                            }
+                        }
+                        $sheet->setCellValue('AA45', $suggestion->total_score);
+                    }
+
+                    // ==== Acceptance First ====
+                    if ($suggestion->Acceptance_First_Suggestion) {
+                        $acc = str_pad($suggestion->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT);
+                        $sheet->fromArray(str_split($acc), null, 'AX3');
+                    }
+
+                    $spreadsheet->addSheet($sheet);
+                }
+            });
+
+        if (!$hasData) {
+            return redirect()->back()->with('error', 'Tidak ada data untuk bulan ini.');
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'Saran_Perbaikan_Bulan_' . now()->format('m_Y') . '.xlsx';
+
+        return response()->streamDownload(fn() => $writer->save('php://output'), $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    public function exportAllold(Request $request)
     {
         // Set timeout lama (300 detik = 5 menit, atau sesuaikan kebutuhan)
         set_time_limit(900);
