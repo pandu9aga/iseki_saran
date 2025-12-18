@@ -27,9 +27,10 @@
                         </form>
                     </div>
                 </div>
-                <a href="{{ route('leader.suggestion.exportAll', ['Month' => $monthInput]) }}" class="btn btn-success btn-sm">
-                    <i class="material-icons-two-tone text-white" style="font-size:16px;">download</i> Export Excel All
-                </a>
+                <button id="btnExportAllPdf" class="btn btn-danger btn-sm">
+                    <i class="material-icons-two-tone text-white" style="font-size:16px;">picture_as_pdf</i>
+                    Export PDF All
+                </button>
                 @if(session('error'))
                     <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
                         {{ session('error') }}
@@ -410,4 +411,36 @@
             });
         });
     </script>
+    <script>
+        $('#btnExportAllPdf').on('click', function () {
+            const month = $('#monthFilter').val();
+
+            if (!month) {
+                alert('Silakan pilih bulan terlebih dahulu');
+                return;
+            }
+
+            const form = $('<form>', {
+                method: 'POST',
+                action: "{{ route('leader.suggestion.exportAllPdf') }}"
+            });
+
+            form.append($('<input>', {
+                type: 'hidden',
+                name: '_token',
+                value: '{{ csrf_token() }}'
+            }));
+
+            form.append($('<input>', {
+                type: 'hidden',
+                name: 'Month',
+                value: month
+            }));
+
+            $('body').append(form);
+            form.submit();
+            form.remove();
+        });
+    </script>
+
 @endsection

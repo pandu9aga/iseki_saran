@@ -427,6 +427,23 @@
                             text: 'Terjadi kesalahan server atau jaringan.'
                         });
                     });
+
+                Promise.all(requests)
+                    .then(() => {
+                        return $.post(
+                            "{{ route('leader.suggestion.finalize', $suggestion->Id_Suggestion) }}",
+                            { _token: csrf }
+                        );
+                    })
+                    .then(() => {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Data & PDF berhasil disimpan!',
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => location.reload());
+                    });
+
             });
 
         });
