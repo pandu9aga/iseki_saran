@@ -1428,7 +1428,7 @@ class LeaderSuggestionController extends Controller
         // ===============================
         $sheet->getPageSetup()
             ->setPaperSize(PageSetup::PAPERSIZE_A4)
-            ->setOrientation(PageSetup::ORIENTATION_LANDSCAPE)
+            // ->setOrientation(PageSetup::ORIENTATION_POTRAIT)
             ->setFitToWidth(1)
             ->setFitToHeight(1);
 
@@ -1451,22 +1451,45 @@ class LeaderSuggestionController extends Controller
         $acc  = str_pad($suggestion->Acceptance_First_Suggestion ?? 0, 5, '0', STR_PAD_LEFT);
         $path = "{$dir}/Saran_Perbaikan_{$bulan}_{$acc}.pdf";
 
-        // ===============================
-        // CONVERT → PDF → SIMPAN
-        // ===============================
-        try {
-            IOFactory::registerWriter('Pdf', Mpdf::class);
-            $writer = IOFactory::createWriter($spreadsheet, 'Pdf');
-            $writer->save($path);
-        } catch (\Throwable $e) {
-            \Log::error('PDF GENERATE FAILED', [
-                'id' => $id,
-                'message' => $e->getMessage()
-            ]);
-        } finally {
-            $spreadsheet->disconnectWorksheets();
-            unset($spreadsheet);
+        // === Simpan ke XLSX ===
+        $tempXlsx = storage_path('app/tmp_saran_' . $suggestion->Id_Suggestion . '_' . time() . '.xlsx');
+        IOFactory::createWriter($spreadsheet, 'Xlsx')->save($tempXlsx);
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet);
+
+        // === Convert via LibreOffice ===
+        $librePath = 'C:\xampp\htdocs\iseki_saran\storage\app\LibreOfficePortable\App\libreoffice\program\soffice.exe';
+
+        $cmd = sprintf(
+            '"%s" --headless --convert-to pdf "%s" --outdir "%s"',
+            $librePath,
+            $tempXlsx,
+            dirname($tempXlsx)
+        );
+
+        exec($cmd, $output, $resultCode);
+
+        if ($resultCode !== 0) {
+            @unlink($tempXlsx);
+            throw new \Exception('LibreOffice gagal convert: ' . implode("\n", $output));
         }
+
+        $tempPdf = preg_replace('/\.xlsx$/i', '.pdf', $tempXlsx);
+
+        if (!file_exists($tempPdf)) {
+            @unlink($tempXlsx);
+            throw new \Exception('PDF tidak ditemukan setelah konversi.');
+        }
+
+        // === Move ke path final ===
+        if (file_exists($path)) {
+            unlink($path);
+        }
+
+        rename($tempPdf, $path);
+
+        // === Cleanup ===
+        @unlink($tempXlsx);
     }
 
     public function finalizeSuggestion($id)
@@ -1532,6 +1555,35 @@ class LeaderSuggestionController extends Controller
         $pdf->Output($path, 'F');
 
         return response()->download($path)->deleteFileAfterSend(true);
+    }
+
+    public function exportAllPdfList(Request $request)
+    {
+        $bulan = $request->get('Month'); // Y-m
+
+        $suggestions = Suggestion::whereNotNull('Acceptance_First_Suggestion')
+            ->whereRaw("DATE_FORMAT(Date_First_Suggestion, '%Y-%m') = ?", [$bulan])
+            ->orderBy('Acceptance_First_Suggestion')
+            ->get(['Id_Suggestion', 'Acceptance_First_Suggestion']);
+
+        $dir = public_path("uploads/pdf/{$bulan}");
+
+        $items = $suggestions->map(function ($s) use ($bulan, $dir) {
+            $acc  = str_pad($s->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT);
+            $file = "{$dir}/Saran_Perbaikan_{$bulan}_{$acc}.pdf";
+
+            return [
+                'id'     => $s->Id_Suggestion,
+                'acc'    => $acc,
+                'exists' => file_exists($file),
+            ];
+        });
+
+        return response()->json([
+            'total'     => $items->count(),
+            'pdf_ready' => $items->where('exists', true)->count(),
+            'items'     => $items,
+        ]);
     }
 
     public function exportAll(Request $request)

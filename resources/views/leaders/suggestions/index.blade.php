@@ -66,6 +66,51 @@
                     </table>
                 </div>
             </div>
+            <!-- Modal Export PDF All -->
+            <div class="modal fade" id="modalExportPdfAll" tabindex="-1">
+                <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title text-primary">
+                                Daftar PDF Saran <span id="modalMonth"></span>
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <span class="badge bg-primary me-2">
+                                    Total Dinilai: <b id="totalSuggestion">0</b>
+                                </span>
+                                <span class="badge bg-info">
+                                    PDF Tersedia: <b id="totalPdfReady">0</b>
+                                </span>
+                            </div>
+
+                            <div id="pdfBadgeContainer" class="d-flex flex-wrap gap-2 mb-2">
+                                <span class="text-muted">Loading...</span>
+                            </div>
+
+                            <span class="text-secondary text-xs">
+                                Badge hijau = PDF tersedia • Abu-abu = belum dikonversi.
+                            </span>
+
+                            <span class="text-secondary text-xs">
+                                Silakan tunggu atau lakukan simpan ulang pada saran yang belum tersedia PDF-nya.
+                            </span>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" data-bs-dismiss="modal">
+                                Close
+                            </button>
+                            <button id="btnDownloadAllPdf" class="btn btn-danger">
+                                Download PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 @endsection
@@ -420,6 +465,56 @@
                 return;
             }
 
+            $('#modalMonth').text(month);
+            $('#pdfBadgeContainer').html('<span class="text-muted">Loading...</span>');
+            $('#totalSuggestion').text('0');
+            $('#totalPdfReady').text('0');
+
+            $('#modalExportPdfAll').modal('show');
+
+            $.ajax({
+                url: "{{ route('leader.suggestion.exportAllPdf.list') }}",
+                type: 'GET',
+                data: { Month: month },
+                success: function (res) {
+
+                    $('#totalSuggestion').text(res.total);
+                    $('#totalPdfReady').text(res.pdf_ready);
+
+                    if (!res.items.length) {
+                        $('#pdfBadgeContainer').html(
+                            '<span class="text-muted">Tidak ada data</span>'
+                        );
+                        return;
+                    }
+
+                    let html = '';
+                    res.items.forEach(item => {
+                        const color = item.exists ? 'success' : 'secondary';
+                        const url   = "{{ url('leader/suggestion') }}/" + item.id;
+
+                        html += `
+                            <a href="${url}" target="_blank"
+                            class="badge bg-${color} fs-6 px-3 py-2 text-decoration-none">
+                                ${item.acc}
+                            </a>
+                        `;
+                    });
+
+                    $('#pdfBadgeContainer').html(html);
+                },
+                error: function () {
+                    $('#pdfBadgeContainer').html(
+                        '<span class="text-danger">Gagal memuat data</span>'
+                    );
+                }
+            });
+        });
+    </script>
+    <script>
+        $('#btnDownloadAllPdf').on('click', function () {
+            const month = $('#monthFilter').val();
+
             const form = $('<form>', {
                 method: 'POST',
                 action: "{{ route('leader.suggestion.exportAllPdf') }}"
@@ -442,5 +537,4 @@
             form.remove();
         });
     </script>
-
 @endsection
