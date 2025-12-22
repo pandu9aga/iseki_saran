@@ -286,6 +286,7 @@
                                                     <label class="form-check-label me-2">Lainnya:</label>
                                                     <textarea class="form-control form-control-sm mt-1"
                                                         name="comment_custom" placeholder="Tulis komentar..."
+                                                        style="font-size: 20px;"
                                                         rows="3">{{ $suggestion->Comment_Suggestion && !in_array($suggestion->Comment_Suggestion, $options) ? $suggestion->Comment_Suggestion : '' }}</textarea>
                                                 </div>
                                             </div>
