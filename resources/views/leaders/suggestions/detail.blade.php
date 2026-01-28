@@ -401,6 +401,17 @@
                     Id_User: '{{ $user->Id_User }}' 
                 };
 
+                // Hitung total skor B
+                const skorB = fields.Score_B_Suggestion;
+                const totalSkorB = (parseInt(skorB.kreatifitas) || 0) +
+                                (parseInt(skorB.ide) || 0) +
+                                (parseInt(skorB.usaha) || 0);
+
+                // Jika skor A atau total B > 0, set status ke 'Sudah Selesai'
+                if ((fields.Score_A_Suggestion && parseInt(fields.Score_A_Suggestion) > 0) || totalSkorB > 0) {
+                    fields.Status_Suggestion = '1'; // Sudah Selesai
+                }
+
                 const requests = Object.entries(fields).map(([field, value]) => updateField(field, value));
 
                 Promise.all(requests)
@@ -490,6 +501,48 @@
             const container = document.querySelector('.preview-container');
             container.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
         });
+    });
+
+    // Tambahkan event listener untuk textarea komentar
+    document.querySelector('[name="comment_custom"]').addEventListener('input', function() {
+        if (this.value.trim() !== '') {
+            // Centang radio button "lainnya"
+            document.querySelector('[name="comment_option"][value="custom"]').checked = true;
+        }
+    });
+
+    // Jika radio "lainnya" dicentang, fokus ke textarea
+    document.querySelector('[name="comment_option"][value="custom"]').addEventListener('change', function() {
+        if (this.checked) {
+            document.querySelector('[name="comment_custom"]').focus();
+        }
+    });
+
+    $(function() {
+        // Fungsi untuk cek dan ubah status otomatis
+        function checkAndSetStatus() {
+            const scoreA = $('[name="Score_A_Suggestion"]:checked').val();
+            const skorB = {
+                kreatifitas: $('[name="kreatifitas"]:checked').val(),
+                ide: $('[name="ide"]:checked').val(),
+                usaha: $('[name="usaha"]:checked').val()
+            };
+
+            const totalSkorB = (parseInt(skorB.kreatifitas) || 0) +
+                            (parseInt(skorB.ide) || 0) +
+                            (parseInt(skorB.usaha) || 0);
+
+            // Jika skor A atau total B > 0, set status ke 'Sudah Selesai'
+            if ((scoreA && parseInt(scoreA) > 0) || totalSkorB > 0) {
+                $('[name="Status_Suggestion"][value="1"]').prop('checked', true);
+            }
+        }
+
+        // Event listener untuk skor A
+        $('[name="Score_A_Suggestion"]').on('change', checkAndSetStatus);
+
+        // Event listener untuk skor B
+        $('[name="kreatifitas"], [name="ide"], [name="usaha"]').on('change', checkAndSetStatus);
     });
 
     document.addEventListener('DOMContentLoaded', function() {
