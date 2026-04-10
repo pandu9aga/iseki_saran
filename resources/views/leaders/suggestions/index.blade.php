@@ -53,7 +53,7 @@
                                 <th class="text-primary text-center">Foto <br> Perbaikan</th>
                                 <th class="text-primary text-center">Skor A</th>
                                 <th class="text-primary text-center">Skor B</th>
-                                <th class="text-primary text-center">Komentar</th>
+                                <th class="text-primary text-center">Komentar<span style="color: #FFFFFF;">__________________________________________________________</span></th>
                                 <th class="text-primary text-center">Leader</th>
                                 <th class="text-primary text-center">Status</th>
                                 <th class="text-primary text-center">Tema</th>
@@ -257,7 +257,7 @@
                         name: 'Comment_Suggestion',
                         render: function(data, type, row) {
                             if (!data) return '';
-                            return data.length > 20 ? data.substr(0, 20) + '...' : data;
+                            return data.length > 100 ? data.substr(0, 100) + '...' : data;
                         }
                     },
                     {
