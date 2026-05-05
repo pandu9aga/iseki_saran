@@ -100,13 +100,13 @@
                             </span>
                         </div>
 
-                        <div class="modal-footer">
+                        <div class="modal-footer d-flex flex-wrap gap-2 justify-content-between">
                             <button class="btn btn-secondary" data-bs-dismiss="modal">
                                 Close
                             </button>
-                            <button id="btnDownloadAllPdf" class="btn btn-danger">
-                                Download PDF
-                            </button>
+                            <div class="d-flex flex-wrap gap-2" id="divisionDownloadBtns">
+                                <!-- Dynamically populated per-division download buttons -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -469,6 +469,7 @@
             $('#pdfBadgeContainer').html('<span class="text-muted">Loading...</span>');
             $('#totalSuggestion').text('0');
             $('#totalPdfReady').text('0');
+            $('#divisionDownloadBtns').html('');
 
             $('#modalExportPdfAll').modal('show');
 
@@ -488,20 +489,73 @@
                         return;
                     }
 
-                    let html = '';
+                    // Kelompokkan berdasarkan divisi/team
+                    let grouped = {};
                     res.items.forEach(item => {
-                        const color = item.exists ? 'success' : 'secondary';
-                        const url   = "{{ url('leader/suggestion') }}/" + item.id;
+                        const team = item.team || '-';
+                        if (!grouped[team]) grouped[team] = [];
+                        grouped[team].push(item);
+                    });
 
-                        html += `
-                            <a href="${url}" target="_blank"
-                            class="badge bg-${color} fs-6 px-3 py-2 text-decoration-none">
-                                ${item.acc}
-                            </a>
-                        `;
+                    let html = '';
+                    Object.keys(grouped).forEach(team => {
+                        html += `<div class="w-100 mb-2">
+                            <strong class="text-primary d-block mb-1">
+                                <i class="material-icons-two-tone" style="font-size:16px; vertical-align:middle;">group</i>
+                                ${team}
+                                <span class="badge bg-light text-dark">${grouped[team].length}</span>
+                            </strong>
+                            <div class="d-flex flex-wrap gap-2">`;
+
+                        grouped[team].forEach(item => {
+                            const color = item.exists ? 'success' : 'secondary';
+                            const url   = "{{ url('leader/suggestion') }}/" + item.id;
+
+                            html += `
+                                <a href="${url}" target="_blank"
+                                class="badge bg-${color} fs-6 px-3 py-2 text-decoration-none">
+                                    ${item.acc}
+                                </a>
+                            `;
+                        });
+
+                        html += `</div></div>`;
                     });
 
                     $('#pdfBadgeContainer').html(html);
+
+                    // === Generate tombol download per divisi ===
+                    let btnHtml = '';
+
+                    // Tombol per divisi
+                    if (res.teams && res.teams.length > 0) {
+                        res.teams.forEach(team => {
+                            const teamCount = grouped[team] ? grouped[team].length : 0;
+                            const readyCount = grouped[team] ? grouped[team].filter(i => i.exists).length : 0;
+                            btnHtml += `
+                                <button class="btn btn-outline-danger btn-sm btn-download-pdf-divisi"
+                                        data-team="${team}"
+                                        title="Download PDF divisi ${team} (${readyCount}/${teamCount} tersedia)">
+                                    <i class="material-icons-two-tone" style="font-size:14px; vertical-align:middle;">picture_as_pdf</i>
+                                    ${team} <span class="badge bg-danger">${readyCount}</span>
+                                </button>
+                            `;
+                        });
+
+                        // Tombol download semua (jika ada lebih dari 1 divisi)
+                        if (res.teams.length > 1) {
+                            btnHtml += `
+                                <button class="btn btn-danger btn-sm btn-download-pdf-divisi"
+                                        data-team="all"
+                                        title="Download semua divisi">
+                                    <i class="material-icons-two-tone text-white" style="font-size:14px; vertical-align:middle;">picture_as_pdf</i>
+                                    Download Semua <span class="badge bg-light text-danger">${res.pdf_ready}</span>
+                                </button>
+                            `;
+                        }
+                    }
+
+                    $('#divisionDownloadBtns').html(btnHtml);
                 },
                 error: function () {
                     $('#pdfBadgeContainer').html(
@@ -512,8 +566,10 @@
         });
     </script>
     <script>
-        $('#btnDownloadAllPdf').on('click', function () {
+        // Download per divisi via delegated event
+        $(document).on('click', '.btn-download-pdf-divisi', function () {
             const month = $('#monthFilter').val();
+            const team  = $(this).data('team');
 
             const form = $('<form>', {
                 method: 'POST',
@@ -530,6 +586,12 @@
                 type: 'hidden',
                 name: 'Month',
                 value: month
+            }));
+
+            form.append($('<input>', {
+                type: 'hidden',
+                name: 'Team',
+                value: team
             }));
 
             $('body').append(form);

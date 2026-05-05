@@ -838,10 +838,18 @@ class LeaderSuggestionController extends Controller
 
         // === Mapping Acceptance_First_Suggestion ===
         if (!empty($suggestion->Acceptance_First_Suggestion)) {
-            // isi AR3, AT3, AV3
+            // Prefix berdasarkan divisi: Assembling=620, Painting=621, DST=623
+            $teamPrefix = match (strtolower(trim($suggestion->Team_Suggestion ?? ''))) {
+                'assembling' => 0,
+                'painting'   => 1,
+                'dst'        => 3,
+                default      => 0,
+            };
+
+            // isi AR3, AT3, AV3 (prefix nomor)
             $sheet->setCellValue('AR3', 6);
             $sheet->setCellValue('AT3', 2);
-            $sheet->setCellValue('AV3', 0);
+            $sheet->setCellValue('AV3', $teamPrefix);
 
             // format jadi 5 digit (misal: 00001, 00025, dst)
             $accFirst = str_pad($suggestion->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT);
@@ -1407,10 +1415,18 @@ class LeaderSuggestionController extends Controller
 
         // === Mapping Acceptance_First_Suggestion ===
         if (!empty($suggestion->Acceptance_First_Suggestion)) {
-            // isi AR3, AT3, AV3
+            // Prefix berdasarkan divisi: Assembling=620, Painting=621, DST=623
+            $teamPrefix = match (strtolower(trim($suggestion->Team_Suggestion ?? ''))) {
+                'assembling' => 0,
+                'painting'   => 1,
+                'dst'        => 3,
+                default      => 0,
+            };
+
+            // isi AR3, AT3, AV3 (prefix nomor)
             $sheet->setCellValue('AR3', 6);
             $sheet->setCellValue('AT3', 2);
-            $sheet->setCellValue('AV3', 0);
+            $sheet->setCellValue('AV3', $teamPrefix);
 
             // format jadi 5 digit (misal: 00001, 00025, dst)
             $accFirst = str_pad($suggestion->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT);
@@ -1519,24 +1535,40 @@ class LeaderSuggestionController extends Controller
     public function exportAllPdf(Request $request)
     {
         $bulan = $request->get('Month'); // format Y-m
+        $team  = $request->get('Team');  // optional: filter per divisi
         $dir = public_path("uploads/pdf/{$bulan}");
 
         if (!is_dir($dir)) {
             return back()->with('error','Folder PDF tidak ditemukan');
         }
 
-        $files = glob($dir.'/*.pdf');
+        // === SORT BERDASARKAN DIVISI (Team_Suggestion), lalu Acceptance ===
+        $query = Suggestion::whereNotNull('Acceptance_First_Suggestion')
+            ->whereRaw("DATE_FORMAT(Date_First_Suggestion, '%Y-%m') = ?", [$bulan]);
 
-        if (empty($files)) {
-            return back()->with('error','Tidak ada PDF');
+        // Filter per divisi jika dipilih
+        if (!empty($team) && $team !== 'all') {
+            $query->where('Team_Suggestion', $team);
         }
 
-        // === SORT BERDASARKAN NOMOR ACCEPTANCE ===
-        usort($files, function ($a, $b) {
-            preg_match('/_(\d{5})\.pdf$/', $a, $ma);
-            preg_match('/_(\d{5})\.pdf$/', $b, $mb);
-            return intval($ma[1] ?? 0) <=> intval($mb[1] ?? 0);
-        });
+        $suggestions = $query
+            ->orderBy('Team_Suggestion', 'asc')
+            ->orderBy('Acceptance_First_Suggestion', 'asc')
+            ->get(['Id_Suggestion', 'Acceptance_First_Suggestion', 'Team_Suggestion']);
+
+        // Build file list berdasarkan urutan dari database
+        $files = [];
+        foreach ($suggestions as $s) {
+            $acc  = str_pad($s->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT);
+            $file = "{$dir}/Saran_Perbaikan_{$bulan}_{$acc}.pdf";
+            if (file_exists($file)) {
+                $files[] = $file;
+            }
+        }
+
+        if (empty($files)) {
+            return back()->with('error','Tidak ada PDF untuk divisi yang dipilih');
+        }
 
         $pdf = new Fpdi();
 
@@ -1550,8 +1582,16 @@ class LeaderSuggestionController extends Controller
             }
         }
 
-        $output = "Saran_Perbaikan_{$bulan}.pdf";
+        // Nama file output dengan divisi
+        $teamLabel = (!empty($team) && $team !== 'all') ? "_{$team}" : '';
+        $output = "Saran_Perbaikan_{$bulan}{$teamLabel}.pdf";
         $path = storage_path("app/exports/{$output}");
+
+        // Pastikan folder exports ada
+        if (!is_dir(storage_path('app/exports'))) {
+            mkdir(storage_path('app/exports'), 0777, true);
+        }
+
         $pdf->Output($path, 'F');
 
         return response()->download($path)->deleteFileAfterSend(true);
@@ -1561,10 +1601,12 @@ class LeaderSuggestionController extends Controller
     {
         $bulan = $request->get('Month'); // Y-m
 
+        // Urutkan berdasarkan divisi (Team_Suggestion), lalu Acceptance
         $suggestions = Suggestion::whereNotNull('Acceptance_First_Suggestion')
             ->whereRaw("DATE_FORMAT(Date_First_Suggestion, '%Y-%m') = ?", [$bulan])
-            ->orderBy('Acceptance_First_Suggestion')
-            ->get(['Id_Suggestion', 'Acceptance_First_Suggestion']);
+            ->orderBy('Team_Suggestion', 'asc')
+            ->orderBy('Acceptance_First_Suggestion', 'asc')
+            ->get(['Id_Suggestion', 'Acceptance_First_Suggestion', 'Team_Suggestion']);
 
         $dir = public_path("uploads/pdf/{$bulan}");
 
@@ -1575,14 +1617,19 @@ class LeaderSuggestionController extends Controller
             return [
                 'id'     => $s->Id_Suggestion,
                 'acc'    => $acc,
+                'team'   => $s->Team_Suggestion ?? '-',
                 'exists' => file_exists($file),
             ];
         });
+
+        // Ambil daftar divisi unik yang ada
+        $teams = $suggestions->pluck('Team_Suggestion')->filter()->unique()->values();
 
         return response()->json([
             'total'     => $items->count(),
             'pdf_ready' => $items->where('exists', true)->count(),
             'items'     => $items,
+            'teams'     => $teams,
         ]);
     }
 
