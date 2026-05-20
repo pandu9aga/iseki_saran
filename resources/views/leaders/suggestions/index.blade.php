@@ -31,6 +31,10 @@
                     <i class="material-icons-two-tone text-white" style="font-size:16px;">picture_as_pdf</i>
                     Export PDF All
                 </button>
+                <button id="btnExportExcel" class="btn btn-success btn-sm">
+                    <i class="material-icons-two-tone text-white" style="font-size:16px;">table_view</i>
+                    Download Excel
+                </button>
                 @if(session('error'))
                     <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
                         {{ session('error') }}
@@ -597,6 +601,16 @@
             $('body').append(form);
             form.submit();
             form.remove();
+        });
+    </script>
+    <script>
+        $(document).ready(function() {
+            $('#btnExportExcel').on('click', function () {
+                var table = $('#suggestionsTable').DataTable();
+                var params = table.ajax.params();
+                var queryStr = $.param(params);
+                window.location.href = "{{ route('leader.suggestion.exportExcelMonth') }}?" + queryStr;
+            });
         });
     </script>
 @endsection

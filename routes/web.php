@@ -1,15 +1,15 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Middleware\LeaderMiddleware;
-use App\Http\Middleware\MemberMiddleware;
-use App\Http\Controllers\MainController;
 use App\Http\Controllers\Leader\LeaderController;
+use App\Http\Controllers\Leader\LeaderMemberController;
 use App\Http\Controllers\Leader\LeaderSuggestionController;
 use App\Http\Controllers\Leader\UserController;
-use App\Http\Controllers\Leader\LeaderMemberController;
+use App\Http\Controllers\MainController;
 use App\Http\Controllers\Member\MemberController;
 use App\Http\Controllers\Member\SuggestionController;
+use App\Http\Middleware\LeaderMiddleware;
+use App\Http\Middleware\MemberMiddleware;
+use Illuminate\Support\Facades\Route;
 
 // Route::get('/', [MemberController::class, 'index'])->name('/');
 Route::get('/', [MainController::class, 'index'])->name('/');
@@ -36,6 +36,7 @@ Route::middleware(LeaderMiddleware::class)->group(function () {
     Route::get('/leader/suggestion/detail-per-saran', [LeaderSuggestionController::class, 'detailPerSaran'])->name('leader.suggestion.detailPerSaran');
     Route::get('/leader/suggestion/detail-per-saran/data', [LeaderSuggestionController::class, 'detailPerSaranData'])->name('leader.suggestion.detailPerSaran.data');
     Route::get('/leader/suggestion/detail-per-saran/export', [LeaderSuggestionController::class, 'exportDetailPerSaran'])->name('leader.suggestion.detailPerSaran.export');
+    Route::get('/leader/suggestion/export-excel-month', [LeaderSuggestionController::class, 'exportExcelMonth'])->name('leader.suggestion.exportExcelMonth');
     Route::delete('/leader/suggestion/delete/{Id_Suggestion}', [LeaderSuggestionController::class, 'destroy'])->name('leader.suggestion.destroy');
     Route::get('/leader/suggestion/{id}', [LeaderSuggestionController::class, 'show'])->name('leader.suggestion.show');
     Route::post('/leader/suggestion/{id}/update-field', [LeaderSuggestionController::class, 'updateField'])->name('leader.suggestion.updateField');

@@ -3,29 +3,26 @@
 namespace App\Http\Controllers\Leader;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
-use PhpOffice\PhpSpreadsheet\Worksheet\MemoryDrawing;
-use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
-use PhpOffice\PhpSpreadsheet\Writer\Pdf\Mpdf;
-use PhpOffice\PhpSpreadsheet\Writer\Html;
-use Carbon\Carbon;
-use App\Models\User;
 use App\Models\Member;
 use App\Models\Suggestion;
-use Yajra\DataTables\Facades\DataTables;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use setasign\Fpdi\Fpdi;
+use Yajra\DataTables\Facades\DataTables;
 
 class LeaderSuggestionController extends Controller
 {
     public function index()
     {
-        $page = "suggestion";
+        $page = 'suggestion';
 
         $Id_User = session('Id_User');
         $user = User::find($Id_User);
@@ -38,7 +35,7 @@ class LeaderSuggestionController extends Controller
 
     public function filter(Request $request)
     {
-        $page = "suggestion";
+        $page = 'suggestion';
 
         $Id_User = session('Id_User');
         $user = User::find($Id_User);
@@ -70,10 +67,10 @@ class LeaderSuggestionController extends Controller
             'suggestions.Id_User',
             'suggestions.Acceptance_First_Suggestion',
             'suggestions.Acceptance_Last_Suggestion',
-            $rifaDb . '.employees.nama as member_nama',
+            $rifaDb.'.employees.nama as member_nama',
             'users.Name_User as user_name',
         ])
-            ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
+            ->leftJoin($rifaDb.'.employees', $rifaDb.'.employees.id', '=', 'suggestions.Id_Member')
             ->leftJoin('users', 'users.Id_User', '=', 'suggestions.Id_User');
 
         return DataTables::of($query)
@@ -82,6 +79,7 @@ class LeaderSuggestionController extends Controller
                 if ($row->Status_Suggestion == 1) {
                     return '<span class="badge bg-success">Sudah Selesai</span>';
                 }
+
                 return '<span class="badge bg-warning text-dark">Belum Selesai</span>';
             })
             ->editColumn('Score_A_Suggestion', function ($row) {
@@ -111,27 +109,27 @@ class LeaderSuggestionController extends Controller
                 $val = $row->Score_A_Suggestion;
                 $converted = $map[$val] ?? 0;
 
-                return "{$val} = Rp " . number_format($converted, 0, ',', '.') . " rb/tahun";
+                return "{$val} = Rp ".number_format($converted, 0, ',', '.').' rb/tahun';
             })
             ->editColumn('Score_B_Suggestion', function ($row) {
-                if (!$row->Score_B_Suggestion) {
+                if (! $row->Score_B_Suggestion) {
                     return '';
                 }
 
                 $scores = json_decode($row->Score_B_Suggestion, true);
-                if (!is_array($scores)) {
+                if (! is_array($scores)) {
                     return '';
                 }
 
                 $parts = [];
                 if (isset($scores['kreatifitas'])) {
-                    $parts[] = 'Kreatifitas: ' . $scores['kreatifitas'];
+                    $parts[] = 'Kreatifitas: '.$scores['kreatifitas'];
                 }
                 if (isset($scores['ide'])) {
-                    $parts[] = 'Ide: ' . $scores['ide'];
+                    $parts[] = 'Ide: '.$scores['ide'];
                 }
                 if (isset($scores['usaha'])) {
-                    $parts[] = 'Usaha: ' . $scores['usaha'];
+                    $parts[] = 'Usaha: '.$scores['usaha'];
                 }
 
                 return implode(', ', $parts);
@@ -148,12 +146,12 @@ class LeaderSuggestionController extends Controller
             })
             ->addColumn('action', function ($row) {
                 return '
-                    <a href="' . route('leader.suggestion.show', $row->Id_Suggestion) . '" class="btn btn-sm btn-primary">
+                    <a href="'.route('leader.suggestion.show', $row->Id_Suggestion).'" class="btn btn-sm btn-primary">
                         <span class="pc-micon"><i class="material-icons-two-tone text-white">edit</i></span>
                     </a>
                     <button class="btn btn-sm btn-danger delete-btn" 
-                            data-id="' . $row->Id_Suggestion . '" 
-                            data-name="' . $row->Content_Suggestion . '">
+                            data-id="'.$row->Id_Suggestion.'" 
+                            data-name="'.$row->Content_Suggestion.'">
                         <span class="pc-micon"><i class="material-icons-two-tone text-white">delete</i></span>
                     </button>
                 ';
@@ -164,7 +162,7 @@ class LeaderSuggestionController extends Controller
                 'Score_B_Suggestion',
                 'Acceptance_First_Suggestion',
                 'Acceptance_Last_Suggestion',
-                'action'
+                'action',
             ])
             ->make(true);
     }
@@ -194,12 +192,12 @@ class LeaderSuggestionController extends Controller
             'suggestions.Id_User',
             'suggestions.Acceptance_First_Suggestion',
             'suggestions.Acceptance_Last_Suggestion',
-            $rifaDb . '.employees.nama as member_nama',
+            $rifaDb.'.employees.nama as member_nama',
             'users.Name_User as user_name',
         ])
-            ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
+            ->leftJoin($rifaDb.'.employees', $rifaDb.'.employees.id', '=', 'suggestions.Id_Member')
             ->leftJoin('users', 'users.Id_User', '=', 'suggestions.Id_User')
-            ->orderBy($rifaDb . '.employees.nik', 'asc')
+            ->orderBy($rifaDb.'.employees.nik', 'asc')
             ->orderBy('suggestions.Date_First_Suggestion', 'asc');
 
         // Jika ada filter bulan
@@ -225,7 +223,9 @@ class LeaderSuggestionController extends Controller
                     : '<span class="badge bg-warning text-dark">Belum Selesai</span>';
             })
             ->editColumn('Score_A_Suggestion', function ($row) {
-                if ($row->Score_A_Suggestion === null) return '';
+                if ($row->Score_A_Suggestion === null) {
+                    return '';
+                }
                 $map = [
                     0 => 0,
                     1 => 600,
@@ -246,41 +246,45 @@ class LeaderSuggestionController extends Controller
                 ];
                 $val = $row->Score_A_Suggestion;
                 $converted = $map[$val] ?? 0;
-                return "{$val} = Rp " . number_format($converted, 0, ',', '.') . " rb/tahun";
+
+                return "{$val} = Rp ".number_format($converted, 0, ',', '.').' rb/tahun';
             })
             ->editColumn('Score_B_Suggestion', function ($row) {
-                if (!$row->Score_B_Suggestion) return '';
+                if (! $row->Score_B_Suggestion) {
+                    return '';
+                }
                 $scores = json_decode($row->Score_B_Suggestion, true);
-                if (!is_array($scores)) return '';
+                if (! is_array($scores)) {
+                    return '';
+                }
                 $parts = [];
                 foreach (['kreatifitas', 'ide', 'usaha'] as $key) {
                     if (isset($scores[$key])) {
-                        $parts[] = ucfirst($key) . ': ' . $scores[$key];
+                        $parts[] = ucfirst($key).': '.$scores[$key];
                     }
                 }
+
                 return implode(', ', $parts);
             })
             ->editColumn(
                 'Acceptance_First_Suggestion',
-                fn($row) =>
-                $row->Acceptance_First_Suggestion !== null
+                fn ($row) => $row->Acceptance_First_Suggestion !== null
                     ? str_pad($row->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT)
                     : ''
             )
             ->editColumn(
                 'Acceptance_Last_Suggestion',
-                fn($row) =>
-                $row->Acceptance_Last_Suggestion !== null
+                fn ($row) => $row->Acceptance_Last_Suggestion !== null
                     ? str_pad($row->Acceptance_Last_Suggestion, 5, '0', STR_PAD_LEFT)
                     : ''
             )
-            ->addColumn('action', fn($row) => '
-                <a href="' . route('leader.suggestion.show', $row->Id_Suggestion) . '" class="btn btn-sm btn-primary">
+            ->addColumn('action', fn ($row) => '
+                <a href="'.route('leader.suggestion.show', $row->Id_Suggestion).'" class="btn btn-sm btn-primary">
                     <span class="pc-micon"><i class="material-icons-two-tone text-white">edit</i></span>
                 </a>
                 <button class="btn btn-sm btn-danger delete-btn" 
-                        data-id="' . $row->Id_Suggestion . '" 
-                        data-name="' . $row->Content_Suggestion . '">
+                        data-id="'.$row->Id_Suggestion.'" 
+                        data-name="'.$row->Content_Suggestion.'">
                     <span class="pc-micon"><i class="material-icons-two-tone text-white">delete</i></span>
                 </button>
             ')
@@ -290,7 +294,7 @@ class LeaderSuggestionController extends Controller
                 'Score_B_Suggestion',
                 'Acceptance_First_Suggestion',
                 'Acceptance_Last_Suggestion',
-                'action'
+                'action',
             ])
             ->make(true);
     }
@@ -324,12 +328,12 @@ class LeaderSuggestionController extends Controller
     // detail saran
     public function show($id)
     {
-        $page = "suggestion";
+        $page = 'suggestion';
 
         $Id_User = session('Id_User');
         $user = User::find($Id_User);
 
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('leader.login')->with('error', 'Sesi login tidak valid.');
         }
 
@@ -373,13 +377,13 @@ class LeaderSuggestionController extends Controller
             'Comment_Suggestion',
             'Id_User',
             'Acceptance_First_Suggestion',
-            'Acceptance_Last_Suggestion'
+            'Acceptance_Last_Suggestion',
         ];
 
-        if (!in_array($field, $allowed)) {
+        if (! in_array($field, $allowed)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Kolom tidak valid.'
+                'message' => 'Kolom tidak valid.',
             ]);
         }
 
@@ -388,7 +392,7 @@ class LeaderSuggestionController extends Controller
             if ($suggestion->Acceptance_First_Suggestion) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Nomor penerimaan awal sudah ada.'
+                    'message' => 'Nomor penerimaan awal sudah ada.',
                 ]);
             }
             $next = (Suggestion::max('Acceptance_First_Suggestion') ?? 0) + 1;
@@ -398,8 +402,8 @@ class LeaderSuggestionController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Nomor penerimaan awal berhasil ditetapkan.',
-                'field'   => $field,
-                'value'   => $next
+                'field' => $field,
+                'value' => $next,
             ]);
         }
 
@@ -407,7 +411,7 @@ class LeaderSuggestionController extends Controller
             if ($suggestion->Acceptance_Last_Suggestion) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Nomor penerimaan akhir sudah ada.'
+                    'message' => 'Nomor penerimaan akhir sudah ada.',
                 ]);
             }
             $next = (Suggestion::max('Acceptance_Last_Suggestion') ?? 0) + 1;
@@ -417,8 +421,8 @@ class LeaderSuggestionController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Nomor penerimaan akhir berhasil ditetapkan.',
-                'field'   => $field,
-                'value'   => $next
+                'field' => $field,
+                'value' => $next,
             ]);
         }
 
@@ -437,8 +441,8 @@ class LeaderSuggestionController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Nilai skor A berhasil diperbarui.',
-                'field'   => $field,
-                'value'   => $formatted
+                'field' => $field,
+                'value' => $formatted,
             ]);
         }
 
@@ -455,7 +459,7 @@ class LeaderSuggestionController extends Controller
             }
 
             // pastikan value jadi array
-            if (!is_array($value)) {
+            if (! is_array($value)) {
                 $value = [$value];
             }
 
@@ -466,9 +470,9 @@ class LeaderSuggestionController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Nilai skor B berhasil diperbarui.',
-                'field'   => $field,
-                'value'   => $value, // kirim balik array agar bisa render ulang
-                'formatted' => $suggestion->score_b_formatted ?? implode(', ', $value)
+                'field' => $field,
+                'value' => $value, // kirim balik array agar bisa render ulang
+                'formatted' => $suggestion->score_b_formatted ?? implode(', ', $value),
             ]);
         }
 
@@ -488,8 +492,8 @@ class LeaderSuggestionController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Data berhasil diperbarui.',
-            'field'   => $field,
-            'value'   => $formatted
+            'field' => $field,
+            'value' => $formatted,
         ]);
     }
 
@@ -498,11 +502,11 @@ class LeaderSuggestionController extends Controller
         $suggestion = Suggestion::findOrFail($Id_Suggestion);
 
         // Hapus foto permasalahan (Content_Photos_Suggestion)
-        if (!empty($suggestion->Content_Photos_Suggestion)) {
+        if (! empty($suggestion->Content_Photos_Suggestion)) {
             $contentPhotos = json_decode($suggestion->Content_Photos_Suggestion, true);
             if (is_array($contentPhotos)) {
                 foreach ($contentPhotos as $photo) {
-                    $path = public_path('uploads/contents/' . $photo);
+                    $path = public_path('uploads/contents/'.$photo);
                     if ($photo && file_exists($path)) {
                         @unlink($path);
                     }
@@ -511,11 +515,11 @@ class LeaderSuggestionController extends Controller
         }
 
         // Hapus foto perbaikan (Improvement_Photos_Suggestion)
-        if (!empty($suggestion->Improvement_Photos_Suggestion)) {
+        if (! empty($suggestion->Improvement_Photos_Suggestion)) {
             $improvementPhotos = json_decode($suggestion->Improvement_Photos_Suggestion, true);
             if (is_array($improvementPhotos)) {
                 foreach ($improvementPhotos as $photo) {
-                    $path = public_path('uploads/improvements/' . $photo);
+                    $path = public_path('uploads/improvements/'.$photo);
                     if ($photo && file_exists($path)) {
                         @unlink($path);
                     }
@@ -528,7 +532,7 @@ class LeaderSuggestionController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Data deleted successfully'
+            'message' => 'Data deleted successfully',
         ]);
     }
 
@@ -560,17 +564,17 @@ class LeaderSuggestionController extends Controller
         // === Lingkaran outline pink berdasarkan Theme_Suggestion ===
         $positions = [
             'keselamatan' => 'C8',
-            'kualitas'    => 'E8',
-            'cost'        => 'G8',
-            'waktu'       => 'I8',
-            'lingkungan'  => 'K8',
-            'moral'       => 'M8',
-            'fasilitas'       => 'W15',
-            'mould jig'       => 'AA15',
-            'set up'       => 'AG15',
-            'material'       => 'AK15',
-            'metode'       => 'AO15',
-            'informasi'       => 'AS15',
+            'kualitas' => 'E8',
+            'cost' => 'G8',
+            'waktu' => 'I8',
+            'lingkungan' => 'K8',
+            'moral' => 'M8',
+            'fasilitas' => 'W15',
+            'mould jig' => 'AA15',
+            'set up' => 'AG15',
+            'material' => 'AK15',
+            'metode' => 'AO15',
+            'informasi' => 'AS15',
         ];
 
         $theme = strtolower(trim($suggestion->Theme_Suggestion ?? ''));
@@ -597,12 +601,12 @@ class LeaderSuggestionController extends Controller
             $margin = $thickness + 6;
             imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $pink);
 
-            $tmpFile = sys_get_temp_dir() . '/circle_theme_' . $suggestion->Id_Suggestion . '.png';
+            $tmpFile = sys_get_temp_dir().'/circle_theme_'.$suggestion->Id_Suggestion.'.png';
             imagepng($img, $tmpFile);
             imagedestroy($img);
             $tmpFiles[] = $tmpFile;
 
-            $drawing = new Drawing();
+            $drawing = new Drawing;
             $drawing->setName('ThemeCircle');
             $drawing->setPath($tmpFile);
             $drawing->setCoordinates($targetCell);
@@ -640,12 +644,12 @@ class LeaderSuggestionController extends Controller
             $margin = $thickness + 6;
             imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $orange);
 
-            $tmpFile = sys_get_temp_dir() . '/circle_status_' . $suggestion->Id_Suggestion . '.png';
+            $tmpFile = sys_get_temp_dir().'/circle_status_'.$suggestion->Id_Suggestion.'.png';
             imagepng($img, $tmpFile);
             imagedestroy($img);
             $tmpFiles[] = $tmpFile;
 
-            $drawing = new Drawing();
+            $drawing = new Drawing;
             $drawing->setName('StatusCircle');
             $drawing->setPath($tmpFile);
             $drawing->setCoordinates($statusCell);
@@ -658,16 +662,16 @@ class LeaderSuggestionController extends Controller
 
         // === Lingkaran outline hitam berdasarkan Score_A_Suggestion ===
         $scoreMap = [
-            0  => 'E37',
-            1  => 'F37',
-            2  => 'G37',
-            3  => 'H37',
-            4  => 'I37',
-            5  => 'J37',
-            6  => 'K37',
-            7  => 'L37',
-            8  => 'M37',
-            9  => 'O37',
+            0 => 'E37',
+            1 => 'F37',
+            2 => 'G37',
+            3 => 'H37',
+            4 => 'I37',
+            5 => 'J37',
+            6 => 'K37',
+            7 => 'L37',
+            8 => 'M37',
+            9 => 'O37',
             10 => 'Q37',
             11 => 'S37',
             12 => 'U37',
@@ -676,7 +680,7 @@ class LeaderSuggestionController extends Controller
             15 => 'AA37',
         ];
 
-        if (!is_null($suggestion->Score_A_Suggestion) && isset($scoreMap[$suggestion->Score_A_Suggestion])) {
+        if (! is_null($suggestion->Score_A_Suggestion) && isset($scoreMap[$suggestion->Score_A_Suggestion])) {
             $scoreCell = $scoreMap[$suggestion->Score_A_Suggestion];
 
             if (function_exists('imagecreatetruecolor')) {
@@ -692,12 +696,12 @@ class LeaderSuggestionController extends Controller
                 $margin = $thickness + 6;
                 imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $black);
 
-                $tmpFile = sys_get_temp_dir() . '/circle_score_' . $suggestion->Id_Suggestion . '.png';
+                $tmpFile = sys_get_temp_dir().'/circle_score_'.$suggestion->Id_Suggestion.'.png';
                 imagepng($img, $tmpFile);
                 imagedestroy($img);
                 $tmpFiles[] = $tmpFile;
 
-                $drawing = new Drawing();
+                $drawing = new Drawing;
                 $drawing->setName('ScoreCircle');
                 $drawing->setPath($tmpFile);
                 $drawing->setCoordinates($scoreCell);
@@ -715,7 +719,7 @@ class LeaderSuggestionController extends Controller
         }
 
         // === Lingkaran outline hitam berdasarkan Score_B_Suggestion (JSON) ===
-        if (!empty($suggestion->Score_B_Suggestion)) {
+        if (! empty($suggestion->Score_B_Suggestion)) {
             $scoreB = json_decode($suggestion->Score_B_Suggestion, true);
 
             if (is_array($scoreB)) {
@@ -766,13 +770,13 @@ class LeaderSuggestionController extends Controller
                             $margin = $thickness + 6;
                             imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $black);
 
-                            $tmpFile = sys_get_temp_dir() . '/circle_scoreB_' . $key . '_' . $suggestion->Id_Suggestion . '.png';
+                            $tmpFile = sys_get_temp_dir().'/circle_scoreB_'.$key.'_'.$suggestion->Id_Suggestion.'.png';
                             imagepng($img, $tmpFile);
                             imagedestroy($img);
                             $tmpFiles[] = $tmpFile;
 
-                            $drawing = new Drawing();
-                            $drawing->setName('ScoreB_' . $key);
+                            $drawing = new Drawing;
+                            $drawing->setName('ScoreB_'.$key);
                             $drawing->setPath($tmpFile);
                             $drawing->setCoordinates($cell);
                             $drawing->setOffsetX(0);
@@ -790,17 +794,17 @@ class LeaderSuggestionController extends Controller
         }
 
         // === Insert gambar Content & Improvement ===
-        if (!empty($suggestion->Content_Photos_Suggestion)) {
+        if (! empty($suggestion->Content_Photos_Suggestion)) {
             $contentPhotos = json_decode($suggestion->Content_Photos_Suggestion, true);
 
             if (is_array($contentPhotos)) {
                 foreach ($contentPhotos as $i => $photoName) {
-                    $filePath = public_path('uploads/contents/' . $photoName);
-                    if (!empty($photoName) && file_exists($filePath)) {
+                    $filePath = public_path('uploads/contents/'.$photoName);
+                    if (! empty($photoName) && file_exists($filePath)) {
                         $cell = $i == 0 ? 'B19' : ($i == 1 ? 'B24' : null);
                         if ($cell) {
-                            $drawing = new Drawing();
-                            $drawing->setName('ContentPhoto' . ($i + 1));
+                            $drawing = new Drawing;
+                            $drawing->setName('ContentPhoto'.($i + 1));
                             $drawing->setPath($filePath);
                             $drawing->setCoordinates($cell);
                             $drawing->setOffsetX(200);
@@ -813,17 +817,17 @@ class LeaderSuggestionController extends Controller
             }
         }
 
-        if (!empty($suggestion->Improvement_Photos_Suggestion)) {
+        if (! empty($suggestion->Improvement_Photos_Suggestion)) {
             $improvePhotos = json_decode($suggestion->Improvement_Photos_Suggestion, true);
 
             if (is_array($improvePhotos)) {
                 foreach ($improvePhotos as $i => $photoName) {
-                    $filePath = public_path('uploads/improvements/' . $photoName);
-                    if (!empty($photoName) && file_exists($filePath)) {
+                    $filePath = public_path('uploads/improvements/'.$photoName);
+                    if (! empty($photoName) && file_exists($filePath)) {
                         $cell = $i == 0 ? 'AG19' : ($i == 1 ? 'AG24' : null);
                         if ($cell) {
-                            $drawing = new Drawing();
-                            $drawing->setName('ImprovementPhoto' . ($i + 1));
+                            $drawing = new Drawing;
+                            $drawing->setName('ImprovementPhoto'.($i + 1));
                             $drawing->setPath($filePath);
                             $drawing->setCoordinates($cell);
                             $drawing->setOffsetX(200);
@@ -837,13 +841,13 @@ class LeaderSuggestionController extends Controller
         }
 
         // === Mapping Acceptance_First_Suggestion ===
-        if (!empty($suggestion->Acceptance_First_Suggestion)) {
+        if (! empty($suggestion->Acceptance_First_Suggestion)) {
             // Prefix berdasarkan divisi: Assembling=620, Painting=621, DST=623
             $teamPrefix = match (strtolower(trim($suggestion->Team_Suggestion ?? ''))) {
                 'assembling' => 0,
-                'painting'   => 1,
-                'dst'        => 3,
-                default      => 0,
+                'painting' => 1,
+                'dst' => 3,
+                default => 0,
             };
 
             // isi AR3, AT3, AV3 (prefix nomor)
@@ -864,7 +868,7 @@ class LeaderSuggestionController extends Controller
 
         // Output file Excel
         $writer = new Xlsx($spreadsheet);
-        $filename = 'Saran_Perbaikan_' . $suggestion->member->nama . '_' . $suggestion->Id_Suggestion . '.xlsx';
+        $filename = 'Saran_Perbaikan_'.$suggestion->member->nama.'_'.$suggestion->Id_Suggestion.'.xlsx';
 
         return response()->streamDownload(function () use ($writer, $tmpFiles) {
             $writer->save('php://output');
@@ -880,7 +884,7 @@ class LeaderSuggestionController extends Controller
 
     public function notSubmit()
     {
-        $page = "not-submit";
+        $page = 'not-submit';
 
         $Id_User = session('Id_User');
         $user = User::find($Id_User);
@@ -893,7 +897,7 @@ class LeaderSuggestionController extends Controller
 
     public function notSubmitFilter(Request $request)
     {
-        $page = "not-submit";
+        $page = 'not-submit';
 
         $Id_User = session('Id_User');
         $user = User::find($Id_User);
@@ -939,15 +943,15 @@ class LeaderSuggestionController extends Controller
         // Kembalikan hasil ke DataTables
         return DataTables::eloquent($query)
             ->addIndexColumn()
-            ->addColumn('name', fn($row) => $row->nama)
-            ->addColumn('nik', fn($row) => $row->nik)
-            ->addColumn('team', fn($row) => $row->division?->nama ?? '-')
+            ->addColumn('name', fn ($row) => $row->nama)
+            ->addColumn('nik', fn ($row) => $row->nik)
+            ->addColumn('team', fn ($row) => $row->division?->nama ?? '-')
             ->make(true);
     }
 
     public function notSign()
     {
-        $page = "not-sign";
+        $page = 'not-sign';
 
         $Id_User = session('Id_User');
         $user = User::find($Id_User);
@@ -960,7 +964,7 @@ class LeaderSuggestionController extends Controller
 
     public function notSignFilter(Request $request)
     {
-        $page = "not-sign";
+        $page = 'not-sign';
 
         $Id_User = session('Id_User');
         $user = User::find($Id_User);
@@ -995,14 +999,14 @@ class LeaderSuggestionController extends Controller
             'suggestions.Id_User',
             'suggestions.Acceptance_First_Suggestion',
             'suggestions.Acceptance_Last_Suggestion',
-            $rifaDb . '.employees.nama as member_nama',
-            $rifaDb . '.employees.nik as member_nik',
+            $rifaDb.'.employees.nama as member_nama',
+            $rifaDb.'.employees.nik as member_nik',
             'users.Name_User as user_name',
         ])
-            ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
+            ->leftJoin($rifaDb.'.employees', $rifaDb.'.employees.id', '=', 'suggestions.Id_Member')
             ->leftJoin('users', 'users.Id_User', '=', 'suggestions.Id_User')
             ->whereNull('suggestions.Id_User')
-            ->orderBy($rifaDb . '.employees.nik', 'asc')
+            ->orderBy($rifaDb.'.employees.nik', 'asc')
             ->orderBy('suggestions.Date_First_Suggestion', 'asc');
 
         // Jika ada filter bulan
@@ -1028,7 +1032,9 @@ class LeaderSuggestionController extends Controller
                     : '<span class="badge bg-warning text-dark">Belum Selesai</span>';
             })
             ->editColumn('Score_A_Suggestion', function ($row) {
-                if ($row->Score_A_Suggestion === null) return '';
+                if ($row->Score_A_Suggestion === null) {
+                    return '';
+                }
                 $map = [
                     0 => 0,
                     1 => 600,
@@ -1049,41 +1055,45 @@ class LeaderSuggestionController extends Controller
                 ];
                 $val = $row->Score_A_Suggestion;
                 $converted = $map[$val] ?? 0;
-                return "{$val} = Rp " . number_format($converted, 0, ',', '.') . " rb/tahun";
+
+                return "{$val} = Rp ".number_format($converted, 0, ',', '.').' rb/tahun';
             })
             ->editColumn('Score_B_Suggestion', function ($row) {
-                if (!$row->Score_B_Suggestion) return '';
+                if (! $row->Score_B_Suggestion) {
+                    return '';
+                }
                 $scores = json_decode($row->Score_B_Suggestion, true);
-                if (!is_array($scores)) return '';
+                if (! is_array($scores)) {
+                    return '';
+                }
                 $parts = [];
                 foreach (['kreatifitas', 'ide', 'usaha'] as $key) {
                     if (isset($scores[$key])) {
-                        $parts[] = ucfirst($key) . ': ' . $scores[$key];
+                        $parts[] = ucfirst($key).': '.$scores[$key];
                     }
                 }
+
                 return implode(', ', $parts);
             })
             ->editColumn(
                 'Acceptance_First_Suggestion',
-                fn($row) =>
-                $row->Acceptance_First_Suggestion !== null
+                fn ($row) => $row->Acceptance_First_Suggestion !== null
                     ? str_pad($row->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT)
                     : ''
             )
             ->editColumn(
                 'Acceptance_Last_Suggestion',
-                fn($row) =>
-                $row->Acceptance_Last_Suggestion !== null
+                fn ($row) => $row->Acceptance_Last_Suggestion !== null
                     ? str_pad($row->Acceptance_Last_Suggestion, 5, '0', STR_PAD_LEFT)
                     : ''
             )
-            ->addColumn('action', fn($row) => '
-                <a href="' . route('leader.suggestion.show', $row->Id_Suggestion) . '" class="btn btn-sm btn-primary">
+            ->addColumn('action', fn ($row) => '
+                <a href="'.route('leader.suggestion.show', $row->Id_Suggestion).'" class="btn btn-sm btn-primary">
                     <span class="pc-micon"><i class="material-icons-two-tone text-white">edit</i></span>
                 </a>
                 <button class="btn btn-sm btn-danger delete-btn" 
-                        data-id="' . $row->Id_Suggestion . '" 
-                        data-name="' . $row->Content_Suggestion . '">
+                        data-id="'.$row->Id_Suggestion.'" 
+                        data-name="'.$row->Content_Suggestion.'">
                     <span class="pc-micon"><i class="material-icons-two-tone text-white">delete</i></span>
                 </button>
             ')
@@ -1093,7 +1103,7 @@ class LeaderSuggestionController extends Controller
                 'Score_B_Suggestion',
                 'Acceptance_First_Suggestion',
                 'Acceptance_Last_Suggestion',
-                'action'
+                'action',
             ])
             ->make(true);
     }
@@ -1101,7 +1111,7 @@ class LeaderSuggestionController extends Controller
     public function convertPdf($id): void
     {
         $suggestion = Suggestion::with(['user', 'member'])->find($id);
-        if (!$suggestion) {
+        if (! $suggestion) {
             return;
         }
 
@@ -1137,17 +1147,17 @@ class LeaderSuggestionController extends Controller
         // === Lingkaran outline pink berdasarkan Theme_Suggestion ===
         $positions = [
             'keselamatan' => 'C8',
-            'kualitas'    => 'E8',
-            'cost'        => 'G8',
-            'waktu'       => 'I8',
-            'lingkungan'  => 'K8',
-            'moral'       => 'M8',
-            'fasilitas'       => 'W15',
-            'mould jig'       => 'AA15',
-            'set up'       => 'AG15',
-            'material'       => 'AK15',
-            'metode'       => 'AO15',
-            'informasi'       => 'AS15',
+            'kualitas' => 'E8',
+            'cost' => 'G8',
+            'waktu' => 'I8',
+            'lingkungan' => 'K8',
+            'moral' => 'M8',
+            'fasilitas' => 'W15',
+            'mould jig' => 'AA15',
+            'set up' => 'AG15',
+            'material' => 'AK15',
+            'metode' => 'AO15',
+            'informasi' => 'AS15',
         ];
 
         $theme = strtolower(trim($suggestion->Theme_Suggestion ?? ''));
@@ -1174,12 +1184,12 @@ class LeaderSuggestionController extends Controller
             $margin = $thickness + 6;
             imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $pink);
 
-            $tmpFile = sys_get_temp_dir() . '/circle_theme_' . $suggestion->Id_Suggestion . '.png';
+            $tmpFile = sys_get_temp_dir().'/circle_theme_'.$suggestion->Id_Suggestion.'.png';
             imagepng($img, $tmpFile);
             imagedestroy($img);
             $tmpFiles[] = $tmpFile;
 
-            $drawing = new Drawing();
+            $drawing = new Drawing;
             $drawing->setName('ThemeCircle');
             $drawing->setPath($tmpFile);
             $drawing->setCoordinates($targetCell);
@@ -1217,12 +1227,12 @@ class LeaderSuggestionController extends Controller
             $margin = $thickness + 6;
             imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $orange);
 
-            $tmpFile = sys_get_temp_dir() . '/circle_status_' . $suggestion->Id_Suggestion . '.png';
+            $tmpFile = sys_get_temp_dir().'/circle_status_'.$suggestion->Id_Suggestion.'.png';
             imagepng($img, $tmpFile);
             imagedestroy($img);
             $tmpFiles[] = $tmpFile;
 
-            $drawing = new Drawing();
+            $drawing = new Drawing;
             $drawing->setName('StatusCircle');
             $drawing->setPath($tmpFile);
             $drawing->setCoordinates($statusCell);
@@ -1235,16 +1245,16 @@ class LeaderSuggestionController extends Controller
 
         // === Lingkaran outline hitam berdasarkan Score_A_Suggestion ===
         $scoreMap = [
-            0  => 'E37',
-            1  => 'F37',
-            2  => 'G37',
-            3  => 'H37',
-            4  => 'I37',
-            5  => 'J37',
-            6  => 'K37',
-            7  => 'L37',
-            8  => 'M37',
-            9  => 'O37',
+            0 => 'E37',
+            1 => 'F37',
+            2 => 'G37',
+            3 => 'H37',
+            4 => 'I37',
+            5 => 'J37',
+            6 => 'K37',
+            7 => 'L37',
+            8 => 'M37',
+            9 => 'O37',
             10 => 'Q37',
             11 => 'S37',
             12 => 'U37',
@@ -1253,7 +1263,7 @@ class LeaderSuggestionController extends Controller
             15 => 'AA37',
         ];
 
-        if (!is_null($suggestion->Score_A_Suggestion) && isset($scoreMap[$suggestion->Score_A_Suggestion])) {
+        if (! is_null($suggestion->Score_A_Suggestion) && isset($scoreMap[$suggestion->Score_A_Suggestion])) {
             $scoreCell = $scoreMap[$suggestion->Score_A_Suggestion];
 
             if (function_exists('imagecreatetruecolor')) {
@@ -1269,12 +1279,12 @@ class LeaderSuggestionController extends Controller
                 $margin = $thickness + 6;
                 imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $black);
 
-                $tmpFile = sys_get_temp_dir() . '/circle_score_' . $suggestion->Id_Suggestion . '.png';
+                $tmpFile = sys_get_temp_dir().'/circle_score_'.$suggestion->Id_Suggestion.'.png';
                 imagepng($img, $tmpFile);
                 imagedestroy($img);
                 $tmpFiles[] = $tmpFile;
 
-                $drawing = new Drawing();
+                $drawing = new Drawing;
                 $drawing->setName('ScoreCircle');
                 $drawing->setPath($tmpFile);
                 $drawing->setCoordinates($scoreCell);
@@ -1292,7 +1302,7 @@ class LeaderSuggestionController extends Controller
         }
 
         // === Lingkaran outline hitam berdasarkan Score_B_Suggestion (JSON) ===
-        if (!empty($suggestion->Score_B_Suggestion)) {
+        if (! empty($suggestion->Score_B_Suggestion)) {
             $scoreB = json_decode($suggestion->Score_B_Suggestion, true);
 
             if (is_array($scoreB)) {
@@ -1343,13 +1353,13 @@ class LeaderSuggestionController extends Controller
                             $margin = $thickness + 6;
                             imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $black);
 
-                            $tmpFile = sys_get_temp_dir() . '/circle_scoreB_' . $key . '_' . $suggestion->Id_Suggestion . '.png';
+                            $tmpFile = sys_get_temp_dir().'/circle_scoreB_'.$key.'_'.$suggestion->Id_Suggestion.'.png';
                             imagepng($img, $tmpFile);
                             imagedestroy($img);
                             $tmpFiles[] = $tmpFile;
 
-                            $drawing = new Drawing();
-                            $drawing->setName('ScoreB_' . $key);
+                            $drawing = new Drawing;
+                            $drawing->setName('ScoreB_'.$key);
                             $drawing->setPath($tmpFile);
                             $drawing->setCoordinates($cell);
                             $drawing->setOffsetX(0);
@@ -1367,17 +1377,17 @@ class LeaderSuggestionController extends Controller
         }
 
         // === Insert gambar Content & Improvement ===
-        if (!empty($suggestion->Content_Photos_Suggestion)) {
+        if (! empty($suggestion->Content_Photos_Suggestion)) {
             $contentPhotos = json_decode($suggestion->Content_Photos_Suggestion, true);
 
             if (is_array($contentPhotos)) {
                 foreach ($contentPhotos as $i => $photoName) {
-                    $filePath = public_path('uploads/contents/' . $photoName);
-                    if (!empty($photoName) && file_exists($filePath)) {
+                    $filePath = public_path('uploads/contents/'.$photoName);
+                    if (! empty($photoName) && file_exists($filePath)) {
                         $cell = $i == 0 ? 'B19' : ($i == 1 ? 'B24' : null);
                         if ($cell) {
-                            $drawing = new Drawing();
-                            $drawing->setName('ContentPhoto' . ($i + 1));
+                            $drawing = new Drawing;
+                            $drawing->setName('ContentPhoto'.($i + 1));
                             $drawing->setPath($filePath);
                             $drawing->setCoordinates($cell);
                             $drawing->setOffsetX(200);
@@ -1390,17 +1400,17 @@ class LeaderSuggestionController extends Controller
             }
         }
 
-        if (!empty($suggestion->Improvement_Photos_Suggestion)) {
+        if (! empty($suggestion->Improvement_Photos_Suggestion)) {
             $improvePhotos = json_decode($suggestion->Improvement_Photos_Suggestion, true);
 
             if (is_array($improvePhotos)) {
                 foreach ($improvePhotos as $i => $photoName) {
-                    $filePath = public_path('uploads/improvements/' . $photoName);
-                    if (!empty($photoName) && file_exists($filePath)) {
+                    $filePath = public_path('uploads/improvements/'.$photoName);
+                    if (! empty($photoName) && file_exists($filePath)) {
                         $cell = $i == 0 ? 'AG19' : ($i == 1 ? 'AG24' : null);
                         if ($cell) {
-                            $drawing = new Drawing();
-                            $drawing->setName('ImprovementPhoto' . ($i + 1));
+                            $drawing = new Drawing;
+                            $drawing->setName('ImprovementPhoto'.($i + 1));
                             $drawing->setPath($filePath);
                             $drawing->setCoordinates($cell);
                             $drawing->setOffsetX(200);
@@ -1414,13 +1424,13 @@ class LeaderSuggestionController extends Controller
         }
 
         // === Mapping Acceptance_First_Suggestion ===
-        if (!empty($suggestion->Acceptance_First_Suggestion)) {
+        if (! empty($suggestion->Acceptance_First_Suggestion)) {
             // Prefix berdasarkan divisi: Assembling=620, Painting=621, DST=623
             $teamPrefix = match (strtolower(trim($suggestion->Team_Suggestion ?? ''))) {
                 'assembling' => 0,
-                'painting'   => 1,
-                'dst'        => 3,
-                default      => 0,
+                'painting' => 1,
+                'dst' => 3,
+                default => 0,
             };
 
             // isi AR3, AT3, AV3 (prefix nomor)
@@ -1458,17 +1468,17 @@ class LeaderSuggestionController extends Controller
         // PATH OUTPUT PDF
         // ===============================
         $bulan = date('Y-m', strtotime($suggestion->Date_First_Suggestion));
-        $dir   = public_path("uploads/pdf/{$bulan}");
+        $dir = public_path("uploads/pdf/{$bulan}");
 
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             mkdir($dir, 0777, true);
         }
 
-        $acc  = str_pad($suggestion->Acceptance_First_Suggestion ?? 0, 5, '0', STR_PAD_LEFT);
+        $acc = str_pad($suggestion->Acceptance_First_Suggestion ?? 0, 5, '0', STR_PAD_LEFT);
         $path = "{$dir}/Saran_Perbaikan_{$bulan}_{$acc}.pdf";
 
         // === Simpan ke XLSX ===
-        $tempXlsx = storage_path('app/tmp_saran_' . $suggestion->Id_Suggestion . '_' . time() . '.xlsx');
+        $tempXlsx = storage_path('app/tmp_saran_'.$suggestion->Id_Suggestion.'_'.time().'.xlsx');
         IOFactory::createWriter($spreadsheet, 'Xlsx')->save($tempXlsx);
         $spreadsheet->disconnectWorksheets();
         unset($spreadsheet);
@@ -1487,12 +1497,12 @@ class LeaderSuggestionController extends Controller
 
         if ($resultCode !== 0) {
             @unlink($tempXlsx);
-            throw new \Exception('LibreOffice gagal convert: ' . implode("\n", $output));
+            throw new \Exception('LibreOffice gagal convert: '.implode("\n", $output));
         }
 
         $tempPdf = preg_replace('/\.xlsx$/i', '.pdf', $tempXlsx);
 
-        if (!file_exists($tempPdf)) {
+        if (! file_exists($tempPdf)) {
             @unlink($tempXlsx);
             throw new \Exception('PDF tidak ditemukan setelah konversi.');
         }
@@ -1514,12 +1524,12 @@ class LeaderSuggestionController extends Controller
 
         // validasi minimal data penting
         if (
-            !$suggestion->Acceptance_First_Suggestion ||
-            !$suggestion->Date_First_Suggestion
+            ! $suggestion->Acceptance_First_Suggestion ||
+            ! $suggestion->Date_First_Suggestion
         ) {
             return response()->json([
                 'success' => false,
-                'message' => 'Data belum lengkap untuk generate PDF'
+                'message' => 'Data belum lengkap untuk generate PDF',
             ]);
         }
 
@@ -1528,18 +1538,18 @@ class LeaderSuggestionController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'PDF berhasil dibuat'
+            'message' => 'PDF berhasil dibuat',
         ]);
     }
 
     public function exportAllPdf(Request $request)
     {
         $bulan = $request->get('Month'); // format Y-m
-        $team  = $request->get('Team');  // optional: filter per divisi
+        $team = $request->get('Team');  // optional: filter per divisi
         $dir = public_path("uploads/pdf/{$bulan}");
 
-        if (!is_dir($dir)) {
-            return back()->with('error','Folder PDF tidak ditemukan');
+        if (! is_dir($dir)) {
+            return back()->with('error', 'Folder PDF tidak ditemukan');
         }
 
         // === SORT BERDASARKAN DIVISI (Team_Suggestion), lalu Acceptance ===
@@ -1547,7 +1557,7 @@ class LeaderSuggestionController extends Controller
             ->whereRaw("DATE_FORMAT(Date_First_Suggestion, '%Y-%m') = ?", [$bulan]);
 
         // Filter per divisi jika dipilih
-        if (!empty($team) && $team !== 'all') {
+        if (! empty($team) && $team !== 'all') {
             $query->where('Team_Suggestion', $team);
         }
 
@@ -1559,7 +1569,7 @@ class LeaderSuggestionController extends Controller
         // Build file list berdasarkan urutan dari database
         $files = [];
         foreach ($suggestions as $s) {
-            $acc  = str_pad($s->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT);
+            $acc = str_pad($s->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT);
             $file = "{$dir}/Saran_Perbaikan_{$bulan}_{$acc}.pdf";
             if (file_exists($file)) {
                 $files[] = $file;
@@ -1567,10 +1577,10 @@ class LeaderSuggestionController extends Controller
         }
 
         if (empty($files)) {
-            return back()->with('error','Tidak ada PDF untuk divisi yang dipilih');
+            return back()->with('error', 'Tidak ada PDF untuk divisi yang dipilih');
         }
 
-        $pdf = new Fpdi();
+        $pdf = new Fpdi;
 
         foreach ($files as $file) {
             $pageCount = $pdf->setSourceFile($file);
@@ -1583,12 +1593,12 @@ class LeaderSuggestionController extends Controller
         }
 
         // Nama file output dengan divisi
-        $teamLabel = (!empty($team) && $team !== 'all') ? "_{$team}" : '';
+        $teamLabel = (! empty($team) && $team !== 'all') ? "_{$team}" : '';
         $output = "Saran_Perbaikan_{$bulan}{$teamLabel}.pdf";
         $path = storage_path("app/exports/{$output}");
 
         // Pastikan folder exports ada
-        if (!is_dir(storage_path('app/exports'))) {
+        if (! is_dir(storage_path('app/exports'))) {
             mkdir(storage_path('app/exports'), 0777, true);
         }
 
@@ -1611,13 +1621,13 @@ class LeaderSuggestionController extends Controller
         $dir = public_path("uploads/pdf/{$bulan}");
 
         $items = $suggestions->map(function ($s) use ($bulan, $dir) {
-            $acc  = str_pad($s->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT);
+            $acc = str_pad($s->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT);
             $file = "{$dir}/Saran_Perbaikan_{$bulan}_{$acc}.pdf";
 
             return [
-                'id'     => $s->Id_Suggestion,
-                'acc'    => $acc,
-                'team'   => $s->Team_Suggestion ?? '-',
+                'id' => $s->Id_Suggestion,
+                'acc' => $acc,
+                'team' => $s->Team_Suggestion ?? '-',
                 'exists' => file_exists($file),
             ];
         });
@@ -1626,10 +1636,10 @@ class LeaderSuggestionController extends Controller
         $teams = $suggestions->pluck('Team_Suggestion')->filter()->unique()->values();
 
         return response()->json([
-            'total'     => $items->count(),
+            'total' => $items->count(),
             'pdf_ready' => $items->where('exists', true)->count(),
-            'items'     => $items,
-            'teams'     => $teams,
+            'items' => $items,
+            'teams' => $teams,
         ]);
     }
 
@@ -1653,7 +1663,7 @@ class LeaderSuggestionController extends Controller
             return redirect()->back()->with('error', 'Tidak ada data untuk bulan ini.');
         }
 
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $spreadsheet->removeSheetByIndex(0);
 
         $tmpFiles = [];
@@ -1666,7 +1676,7 @@ class LeaderSuggestionController extends Controller
 
             $counter = 1;
             while (in_array($sheetName, $usedNames)) {
-                $sheetName = $cleanName . '_' . $counter;
+                $sheetName = $cleanName.'_'.$counter;
                 $counter++;
             }
             $usedNames[] = $sheetName;
@@ -1696,17 +1706,17 @@ class LeaderSuggestionController extends Controller
             // === Lingkaran outline pink berdasarkan Theme_Suggestion ===
             $positions = [
                 'keselamatan' => 'C8',
-                'kualitas'    => 'E8',
-                'cost'        => 'G8',
-                'waktu'       => 'I8',
-                'lingkungan'  => 'K8',
-                'moral'       => 'M8',
-                'fasilitas'   => 'W15',
-                'mould jig'   => 'AA15',
-                'set up'      => 'AG15',
-                'material'    => 'AK15',
-                'metode'      => 'AO15',
-                'informasi'   => 'AS15',
+                'kualitas' => 'E8',
+                'cost' => 'G8',
+                'waktu' => 'I8',
+                'lingkungan' => 'K8',
+                'moral' => 'M8',
+                'fasilitas' => 'W15',
+                'mould jig' => 'AA15',
+                'set up' => 'AG15',
+                'material' => 'AK15',
+                'metode' => 'AO15',
+                'informasi' => 'AS15',
             ];
 
             $theme = strtolower(trim($suggestion->Theme_Suggestion ?? ''));
@@ -1722,7 +1732,7 @@ class LeaderSuggestionController extends Controller
                 $tmpFile = $this->createCircleImage(255, 0, 151, $suggestion->Id_Suggestion, 'theme');
                 $tmpFiles[] = $tmpFile;
 
-                $drawing = new Drawing();
+                $drawing = new Drawing;
                 $drawing->setName('ThemeCircle');
                 $drawing->setPath($tmpFile);
                 $drawing->setCoordinates($targetCell);
@@ -1751,7 +1761,7 @@ class LeaderSuggestionController extends Controller
                 $tmpFile = $this->createCircleImage(212, 109, 0, $suggestion->Id_Suggestion, 'status');
                 $tmpFiles[] = $tmpFile;
 
-                $drawing = new Drawing();
+                $drawing = new Drawing;
                 $drawing->setName('StatusCircle');
                 $drawing->setPath($tmpFile);
                 $drawing->setCoordinates($statusCell);
@@ -1764,12 +1774,12 @@ class LeaderSuggestionController extends Controller
 
             // === Lingkaran outline hitam berdasarkan Score_A_Suggestion ===
             $scoreMap = [
-                0  => 'E37',
+                0 => 'E37',
                 1 => 'F37',
                 2 => 'G37',
                 3 => 'H37',
                 4 => 'I37',
-                5  => 'J37',
+                5 => 'J37',
                 6 => 'K37',
                 7 => 'L37',
                 8 => 'M37',
@@ -1782,12 +1792,12 @@ class LeaderSuggestionController extends Controller
                 15 => 'AA37',
             ];
 
-            if (!is_null($suggestion->Score_A_Suggestion) && isset($scoreMap[$suggestion->Score_A_Suggestion])) {
+            if (! is_null($suggestion->Score_A_Suggestion) && isset($scoreMap[$suggestion->Score_A_Suggestion])) {
                 $scoreCell = $scoreMap[$suggestion->Score_A_Suggestion];
                 $tmpFile = $this->createCircleImage(0, 0, 0, $suggestion->Id_Suggestion, 'scoreA');
                 $tmpFiles[] = $tmpFile;
 
-                $drawing = new Drawing();
+                $drawing = new Drawing;
                 $drawing->setName('ScoreCircle');
                 $drawing->setPath($tmpFile);
                 $drawing->setCoordinates($scoreCell);
@@ -1799,24 +1809,24 @@ class LeaderSuggestionController extends Controller
             }
 
             // === Lingkaran outline hitam berdasarkan Score_B_Suggestion (JSON) ===
-            if (!empty($suggestion->Score_B_Suggestion)) {
+            if (! empty($suggestion->Score_B_Suggestion)) {
                 $scoreB = json_decode($suggestion->Score_B_Suggestion, true);
                 if (is_array($scoreB)) {
                     $mappingB = [
                         'kreatifitas' => [0 => 'Y42', 1 => 'Z42', 2 => 'AA42', 3 => 'AB42', 4 => 'AC42', 5 => 'AD42'],
-                        'ide'         => [0 => 'Y43', 1 => 'Z43', 2 => 'AA43', 3 => 'AB43', 4 => 'AC43', 5 => 'AD43'],
-                        'usaha'       => [0 => 'Y44', 1 => 'Z44', 2 => 'AA44', 3 => 'AB44', 4 => 'AC44', 5 => 'AD44'],
+                        'ide' => [0 => 'Y43', 1 => 'Z43', 2 => 'AA43', 3 => 'AB43', 4 => 'AC43', 5 => 'AD43'],
+                        'usaha' => [0 => 'Y44', 1 => 'Z44', 2 => 'AA44', 3 => 'AB44', 4 => 'AC44', 5 => 'AD44'],
                     ];
 
                     foreach ($mappingB as $key => $map) {
                         if (isset($scoreB[$key])) {
                             $val = (int) $scoreB[$key];
                             if (isset($map[$val])) {
-                                $tmpFile = $this->createCircleImage(0, 0, 0, $suggestion->Id_Suggestion . '_' . $key, 'scoreB');
+                                $tmpFile = $this->createCircleImage(0, 0, 0, $suggestion->Id_Suggestion.'_'.$key, 'scoreB');
                                 $tmpFiles[] = $tmpFile;
 
-                                $drawing = new Drawing();
-                                $drawing->setName('ScoreB_' . $key);
+                                $drawing = new Drawing;
+                                $drawing->setName('ScoreB_'.$key);
                                 $drawing->setPath($tmpFile);
                                 $drawing->setCoordinates($map[$val]);
                                 $drawing->setOffsetX(0);
@@ -1836,7 +1846,7 @@ class LeaderSuggestionController extends Controller
             $this->attachPhotos($sheet, $suggestion, $tmpFiles);
 
             // === Mapping Acceptance_First_Suggestion ===
-            if (!empty($suggestion->Acceptance_First_Suggestion)) {
+            if (! empty($suggestion->Acceptance_First_Suggestion)) {
                 $sheet->setCellValue('AR3', 6);
                 $sheet->setCellValue('AT3', 2);
                 $sheet->setCellValue('AV3', 0);
@@ -1854,7 +1864,7 @@ class LeaderSuggestionController extends Controller
         }
 
         $writer = new Xlsx($spreadsheet);
-        $filename = 'Saran_Perbaikan_Bulan_' . now()->format('m_Y') . '.xlsx';
+        $filename = 'Saran_Perbaikan_Bulan_'.now()->format('m_Y').'.xlsx';
 
         try {
             return response()->streamDownload(function () use ($writer, $tmpFiles) {
@@ -1868,7 +1878,7 @@ class LeaderSuggestionController extends Controller
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             ]);
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat membuat file: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat membuat file: '.$e->getMessage());
         }
     }
 
@@ -1886,25 +1896,26 @@ class LeaderSuggestionController extends Controller
         $margin = $thickness + 6;
         imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $color);
 
-        $tmpFile = sys_get_temp_dir() . "/circle_{$type}_{$suffix}.png";
+        $tmpFile = sys_get_temp_dir()."/circle_{$type}_{$suffix}.png";
         imagepng($img, $tmpFile);
         imagedestroy($img);
+
         return $tmpFile;
     }
 
     private function attachPhotos($sheet, $suggestion, &$tmpFiles)
     {
         // Content Photos
-        if (!empty($suggestion->Content_Photos_Suggestion)) {
+        if (! empty($suggestion->Content_Photos_Suggestion)) {
             $contentPhotos = json_decode($suggestion->Content_Photos_Suggestion, true);
             if (is_array($contentPhotos)) {
                 foreach ($contentPhotos as $i => $photoName) {
-                    $filePath = public_path('uploads/contents/' . $photoName);
-                    if (!empty($photoName) && file_exists($filePath)) {
+                    $filePath = public_path('uploads/contents/'.$photoName);
+                    if (! empty($photoName) && file_exists($filePath)) {
                         $cell = $i == 0 ? 'B19' : ($i == 1 ? 'B24' : null);
                         if ($cell) {
-                            $drawing = new Drawing();
-                            $drawing->setName('ContentPhoto' . ($i + 1));
+                            $drawing = new Drawing;
+                            $drawing->setName('ContentPhoto'.($i + 1));
                             $drawing->setPath($filePath);
                             $drawing->setCoordinates($cell);
                             $drawing->setOffsetX(200);
@@ -1918,16 +1929,16 @@ class LeaderSuggestionController extends Controller
         }
 
         // Improvement Photos
-        if (!empty($suggestion->Improvement_Photos_Suggestion)) {
+        if (! empty($suggestion->Improvement_Photos_Suggestion)) {
             $improvePhotos = json_decode($suggestion->Improvement_Photos_Suggestion, true);
             if (is_array($improvePhotos)) {
                 foreach ($improvePhotos as $i => $photoName) {
-                    $filePath = public_path('uploads/improvements/' . $photoName);
-                    if (!empty($photoName) && file_exists($filePath)) {
+                    $filePath = public_path('uploads/improvements/'.$photoName);
+                    if (! empty($photoName) && file_exists($filePath)) {
                         $cell = $i == 0 ? 'AG19' : ($i == 1 ? 'AG24' : null);
                         if ($cell) {
-                            $drawing = new Drawing();
-                            $drawing->setName('ImprovementPhoto' . ($i + 1));
+                            $drawing = new Drawing;
+                            $drawing->setName('ImprovementPhoto'.($i + 1));
                             $drawing->setPath($filePath);
                             $drawing->setCoordinates($cell);
                             $drawing->setOffsetX(200);
@@ -1946,11 +1957,12 @@ class LeaderSuggestionController extends Controller
 
     public function detailPerSaran()
     {
-        $page = "detail-per-saran";
+        $page = 'detail-per-saran';
         $Id_User = session('Id_User');
         $user = User::find($Id_User);
         $currentDate = Carbon::now();
         $monthInput = $currentDate->format('Y-m');
+
         return view('leaders.suggestions.detail_per_saran', compact('page', 'user', 'monthInput'));
     }
 
@@ -1974,10 +1986,10 @@ class LeaderSuggestionController extends Controller
         ) + COALESCE(
             JSON_UNQUOTE(JSON_EXTRACT(suggestions.Score_B_Suggestion, '$.usaha')), 0
         ) as total_score"),
-            $rifaDb . '.employees.nama as member_nama',
-            $rifaDb . '.employees.nik as member_nik',
+            $rifaDb.'.employees.nama as member_nama',
+            $rifaDb.'.employees.nik as member_nik',
         ])
-            ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
+            ->leftJoin($rifaDb.'.employees', $rifaDb.'.employees.id', '=', 'suggestions.Id_Member')
             ->leftJoin('users', 'users.Id_User', '=', 'suggestions.Id_User')
             ->whereNotNull('suggestions.Id_User'); // hanya saran yang sudah dinilai
 
@@ -1996,6 +2008,7 @@ class LeaderSuggestionController extends Controller
             })
             ->make(true);
     }
+
     public function exportDetailPerSaran(Request $request)
     {
         $rifaDb = config('database.connections.rifa.database');
@@ -2008,17 +2021,17 @@ class LeaderSuggestionController extends Controller
             'suggestions.Content_Suggestion',
             'suggestions.Score_A_Suggestion',
             'suggestions.Score_B_Suggestion',
-            $rifaDb . '.employees.nama as member_nama',
-            $rifaDb . '.employees.nik as member_nik',
+            $rifaDb.'.employees.nama as member_nama',
+            $rifaDb.'.employees.nik as member_nik',
         ])
-            ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
+            ->leftJoin($rifaDb.'.employees', $rifaDb.'.employees.id', '=', 'suggestions.Id_Member')
             ->whereNotNull('suggestions.Id_User')
             ->whereYear('suggestions.Date_First_Suggestion', $year)
             ->whereMonth('suggestions.Date_First_Suggestion', $month)
             ->get();
 
         // Buat spreadsheet baru
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Detail Per Saran');
 
@@ -2044,12 +2057,12 @@ class LeaderSuggestionController extends Controller
             }
             $total = $scoreA + $scoreB;
 
-            $sheet->setCellValue('A' . $row, $index + 1);
-            $sheet->setCellValue('B' . $row, $s->member_nama ?? '-');
-            $sheet->setCellValue('C' . $row, $total);
-            $sheet->setCellValue('D' . $row, $s->member_nik ?? '-');
-            $sheet->setCellValue('E' . $row, $s->Team_Suggestion ?? '-');
-            $sheet->setCellValue('F' . $row, $s->Content_Suggestion ?? '-');
+            $sheet->setCellValue('A'.$row, $index + 1);
+            $sheet->setCellValue('B'.$row, $s->member_nama ?? '-');
+            $sheet->setCellValue('C'.$row, $total);
+            $sheet->setCellValue('D'.$row, $s->member_nik ?? '-');
+            $sheet->setCellValue('E'.$row, $s->Team_Suggestion ?? '-');
+            $sheet->setCellValue('F'.$row, $s->Content_Suggestion ?? '-');
 
             $row++;
         }
@@ -2064,7 +2077,180 @@ class LeaderSuggestionController extends Controller
         $writer = new Xlsx($spreadsheet);
 
         return response()->streamDownload(
-            fn() => $writer->save('php://output'),
+            fn () => $writer->save('php://output'),
+            $filename,
+            [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ]
+        );
+    }
+
+    /**
+     * Export suggestions of a specific month to Excel, preserving search/sort.
+     */
+    public function exportExcelMonth(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $rifaDb = config('database.connections.rifa.database');
+        $monthInput = $request->input('month');
+
+        $query = Suggestion::select([
+            'suggestions.Id_Suggestion',
+            'suggestions.Id_Member',
+            'suggestions.Team_Suggestion',
+            'suggestions.Theme_Suggestion',
+            'suggestions.Date_First_Suggestion',
+            'suggestions.Date_Last_Suggestion',
+            'suggestions.Status_Suggestion',
+            'suggestions.Content_Suggestion',
+            'suggestions.Improvement_Suggestion',
+            'suggestions.Comment_Suggestion',
+            'suggestions.Id_User',
+            $rifaDb.'.employees.nama as member_nama',
+            'users.Name_User as user_name',
+        ])
+            ->leftJoin($rifaDb.'.employees', $rifaDb.'.employees.id', '=', 'suggestions.Id_Member')
+            ->leftJoin('users', 'users.Id_User', '=', 'suggestions.Id_User');
+
+        if ($monthInput) {
+            try {
+                [$year, $month] = explode('-', $monthInput);
+                $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+                $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth();
+                $query->whereBetween('suggestions.Date_First_Suggestion', [$startDate, $endDate]);
+            } catch (\Exception $e) {
+            }
+        }
+
+        $columnMapping = [
+            1 => $rifaDb.'.employees.nama',
+            2 => 'suggestions.Content_Suggestion',
+            3 => 'suggestions.Date_First_Suggestion',
+            4 => 'suggestions.Team_Suggestion',
+            8 => 'suggestions.Score_A_Suggestion',
+            10 => 'suggestions.Comment_Suggestion',
+            12 => 'suggestions.Status_Suggestion',
+            13 => 'suggestions.Theme_Suggestion',
+            14 => 'suggestions.Acceptance_First_Suggestion',
+            15 => 'suggestions.Acceptance_Last_Suggestion',
+            16 => 'suggestions.Date_Last_Suggestion',
+        ];
+
+        $globalSearch = $request->input('search.value');
+        if ($globalSearch !== null && $globalSearch !== '') {
+            $query->where(function ($q) use ($globalSearch, $rifaDb) {
+                $q->where($rifaDb.'.employees.nama', 'like', '%'.$globalSearch.'%')
+                    ->orWhere('suggestions.Content_Suggestion', 'like', '%'.$globalSearch.'%')
+                    ->orWhere('suggestions.Team_Suggestion', 'like', '%'.$globalSearch.'%')
+                    ->orWhere('suggestions.Theme_Suggestion', 'like', '%'.$globalSearch.'%')
+                    ->orWhere('suggestions.Comment_Suggestion', 'like', '%'.$globalSearch.'%');
+            });
+        }
+
+        $columns = $request->input('columns', []);
+        foreach ($columns as $index => $col) {
+            $searchValue = $col['search']['value'] ?? null;
+            if ($searchValue !== null && $searchValue !== '') {
+                if (isset($columnMapping[$index])) {
+                    $dbCol = $columnMapping[$index];
+
+                    if ($index === 3 && strpos($searchValue, '|date') !== false) {
+                        $dateVal = explode('|', $searchValue)[0];
+                        if ($dateVal) {
+                            $query->whereDate($dbCol, $dateVal);
+                        }
+                    } elseif ($index === 12) {
+                        $query->where($dbCol, $searchValue);
+                    } elseif ($index === 4 || $index === 8 || $index === 13) {
+                        $query->where($dbCol, $searchValue);
+                    } else {
+                        $query->where($dbCol, 'like', '%'.$searchValue.'%');
+                    }
+                }
+            }
+        }
+
+        $orderColIndex = $request->input('order.0.column');
+        $orderDir = $request->input('order.0.dir', 'asc');
+
+        if ($orderColIndex !== null && isset($columnMapping[$orderColIndex])) {
+            $orderCol = $columnMapping[$orderColIndex];
+            if (in_array(strtolower($orderDir), ['asc', 'desc'])) {
+                $query->orderBy($orderCol, $orderDir);
+            }
+        } else {
+            $query->orderBy($rifaDb.'.employees.nik', 'asc')
+                ->orderBy('suggestions.Date_First_Suggestion', 'asc');
+        }
+
+        $suggestions = $query->get();
+
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Data Saran');
+
+        $headers = ['No', 'Member', 'Permasalahan', 'Tanggal', 'Team', 'Komentar', 'Status', 'Tema'];
+        $sheet->fromArray($headers, null, 'A1');
+
+        $sheet->getStyle('A1:H1')->getFont()->setBold(true)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color(\PhpOffice\PhpSpreadsheet\Style\Color::COLOR_WHITE));
+        $sheet->getStyle('A1:H1')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FF4682B4');
+
+        $sheet->getStyle('A1:H1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $row = 2;
+        foreach ($suggestions as $index => $s) {
+            $statusText = $s->Status_Suggestion == 1 ? 'Sudah Selesai' : 'Belum Selesai';
+
+            $sheet->setCellValue('A'.$row, $index + 1);
+            $sheet->setCellValue('B'.$row, $s->member_nama ?? '-');
+            $sheet->setCellValue('C'.$row, $s->Content_Suggestion ?? '-');
+            $sheet->setCellValue('D'.$row, $s->Date_First_Suggestion ?? '-');
+            $sheet->setCellValue('E'.$row, $s->Team_Suggestion ?? '-');
+            $sheet->setCellValue('F'.$row, $s->Comment_Suggestion ?? '-');
+            $sheet->setCellValue('G'.$row, $statusText);
+            $sheet->setCellValue('H'.$row, $s->Theme_Suggestion ?? '-');
+
+            $row++;
+        }
+
+        $highestRow = $sheet->getHighestRow();
+        $highestColumn = $sheet->getHighestColumn();
+
+        $styleArray = [
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['argb' => 'D3D3D3'],
+                ],
+            ],
+        ];
+        $sheet->getStyle('A1:'.$highestColumn.$highestRow)->applyFromArray($styleArray);
+
+        $centerColumns = ['A', 'D', 'E', 'G', 'H'];
+        foreach ($centerColumns as $col) {
+            $sheet->getStyle($col.'2:'.$col.$highestRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        }
+
+        // Set width tetap untuk semua kolom agar tidak melebar
+        $sheet->getColumnDimension('A')->setWidth(5);   // No
+        $sheet->getColumnDimension('B')->setWidth(20);  // Member
+        $sheet->getColumnDimension('C')->setWidth(40);  // Permasalahan
+        $sheet->getColumnDimension('D')->setWidth(15);  // Tanggal
+        $sheet->getColumnDimension('E')->setWidth(15);  // Team
+        $sheet->getColumnDimension('F')->setWidth(30);  // Komentar
+        $sheet->getColumnDimension('G')->setWidth(15);  // Status
+        $sheet->getColumnDimension('H')->setWidth(15);  // Tema
+
+        // Aktifkan text wrapping untuk kolom C dan F
+        $sheet->getStyle('C2:C'.$highestRow)->getAlignment()->setWrapText(true);
+        $sheet->getStyle('F2:F'.$highestRow)->getAlignment()->setWrapText(true);
+
+        $monthStr = $monthInput ?: Carbon::now()->format('Y-m');
+        $filename = "Saran_Bulan_{$monthStr}.xlsx";
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(
+            fn () => $writer->save('php://output'),
             $filename,
             [
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
