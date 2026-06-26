@@ -14,14 +14,30 @@
                         </div>
                         <form class="user" action="{{ route('leader.suggestion.notSign.filter') }}" method="GET">
                             @csrf
-                            <div class="row d-flex align-items-center">
-                                <div class="col-8">
-                                    <input name="Month" id="monthFilter" type="month" class="form-control" value="{{ $monthInput }}" required>
+                            <div class="row d-flex align-items-center g-1">
+                                <div class="col-auto">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="prevMonth">&lt;</button>
                                 </div>
-                                <div class="col-4">
-                                    <button class="d-sm-inline btn btn-md btn-primary" type="submit">
-                                        Apply
-                                    </button>
+                                <div class="col-5">
+                                    <select name="Month" id="monthFilter" class="form-control form-control-sm" required>
+                                        @php
+                                            $startYear = 2020;
+                                            $endYear = date('Y') + 1;
+                                            $months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                                        @endphp
+                                        @for ($y = $startYear; $y <= $endYear; $y++)
+                                            @for ($m = 1; $m <= 12; $m++)
+                                                @php $val = sprintf('%04d-%02d', $y, $m); @endphp
+                                                <option value="{{ $val }}" {{ $val === $monthInput ? 'selected' : '' }}>{{ $months[$m-1] }} {{ $y }}</option>
+                                            @endfor
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-auto">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="nextMonth">&gt;</button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-md btn-primary" type="submit">Apply</button>
                                 </div>
                             </div>
                         </form>
@@ -349,6 +365,29 @@
                         }
                     });
                 }
+            });
+
+            // Prev/Next month navigation
+            $('#prevMonth').on('click', function() {
+                var val = $('#monthFilter').val();
+                if (!val) return;
+                var p = val.split('-');
+                var y = +p[0], m = +p[1];
+                m--;
+                if (m < 1) { m = 12; y--; }
+                $('#monthFilter').val(y + '-' + String(m).padStart(2, '0')).closest('form').submit();
+            });
+            $('#nextMonth').on('click', function() {
+                var val = $('#monthFilter').val();
+                if (!val) return;
+                var p = val.split('-');
+                var y = +p[0], m = +p[1];
+                m++;
+                if (m > 12) { m = 1; y++; }
+                $('#monthFilter').val(y + '-' + String(m).padStart(2, '0')).closest('form').submit();
+            });
+            $('#monthFilter').on('change', function() {
+                $(this).closest('form').submit();
             });
         });
     </script>
