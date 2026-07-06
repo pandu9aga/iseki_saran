@@ -322,7 +322,7 @@ class LeaderSuggestionController extends Controller
     }
 
     // detail saran
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $page = "suggestion";
 
@@ -337,12 +337,59 @@ class LeaderSuggestionController extends Controller
         $contentPhotos = json_decode($suggestion->Content_Photos_Suggestion, true) ?? [];
         $improvementPhotos = json_decode($suggestion->Improvement_Photos_Suggestion, true) ?? [];
 
+        // Navigasi Prev/Next — hanya di antara saran "belum dinilai" (belum ada Id_User)
+        $source = $request->query('source', '');
+        $month  = $request->query('month', '');  // format: yyyy-mm, dari halaman not-sign
+        $prevId = null;
+        $nextId = null;
+
+        if ($source === 'not-sign') {
+            // Ambil semua ID saran belum dinilai dengan urutan yang SAMA
+            // seperti halaman "Belum Dinilai": NIK member ASC, lalu tanggal penyerahan awal ASC
+            $rifaDb = config('database.connections.rifa.database');
+
+            $orderedQuery = Suggestion::select('suggestions.Id_Suggestion')
+                ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
+                ->whereNull('suggestions.Id_User')
+                ->orderBy($rifaDb . '.employees.nik', 'asc')
+                ->orderBy('suggestions.Date_First_Suggestion', 'asc');
+
+            // Filter berdasarkan bulan (sama seperti filter di halaman not-sign)
+            if ($month) {
+                try {
+                    [$year, $mon] = explode('-', $month);
+                    $startDate = Carbon::createFromDate($year, $mon, 1)->startOfMonth();
+                    $endDate   = Carbon::createFromDate($year, $mon, 1)->endOfMonth();
+                    $orderedQuery->whereBetween('suggestions.Date_First_Suggestion', [$startDate, $endDate]);
+                } catch (\Exception $e) {
+                    // abaikan jika format salah
+                }
+            }
+
+            $orderedIds = $orderedQuery->pluck('suggestions.Id_Suggestion')->toArray();
+
+            // Cari posisi ID saat ini dalam daftar terurut tersebut
+            $currentPos = array_search((int) $id, array_map('intval', $orderedIds));
+
+            $prevId = ($currentPos !== false && $currentPos > 0)
+                ? $orderedIds[$currentPos - 1]
+                : null;
+
+            $nextId = ($currentPos !== false && $currentPos < count($orderedIds) - 1)
+                ? $orderedIds[$currentPos + 1]
+                : null;
+        }
+
         return view('leaders.suggestions.detail', [
-            'page' => $page,
-            'user' => $user,
-            'suggestion' => $suggestion,
-            'contentPhotos' => $contentPhotos,
+            'page'              => $page,
+            'user'              => $user,
+            'suggestion'        => $suggestion,
+            'contentPhotos'     => $contentPhotos,
             'improvementPhotos' => $improvementPhotos,
+            'prevId'            => $prevId,
+            'nextId'            => $nextId,
+            'source'            => $source,
+            'month'             => $month,
         ]);
     }
 
@@ -1078,7 +1125,7 @@ class LeaderSuggestionController extends Controller
                     : ''
             )
             ->addColumn('action', fn($row) => '
-                <a href="' . route('leader.suggestion.show', $row->Id_Suggestion) . '" class="btn btn-sm btn-primary">
+                <a href="' . route('leader.suggestion.show', $row->Id_Suggestion) . '?source=not-sign&month=' . urlencode($monthInput ?? '') . '" class="btn btn-sm btn-primary">
                     <span class="pc-micon"><i class="material-icons-two-tone text-white">edit</i></span>
                 </a>
                 <button class="btn btn-sm btn-danger delete-btn" 

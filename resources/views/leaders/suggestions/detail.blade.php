@@ -2,6 +2,39 @@
 
 @section('content')
     <div class="col-sm-12">
+
+        {{-- Panel Navigasi Prev/Next (hanya muncul jika datang dari halaman Belum Dinilai) --}}
+        @if($source === 'not-sign')
+        @php $navSuffix = '?source=not-sign' . ($month ? '&month=' . urlencode($month) : ''); @endphp
+        <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+            <div>
+                @if($prevId)
+                    <a href="{{ route('leader.suggestion.show', $prevId) . $navSuffix }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">arrow_back</i> Saran Sebelumnya
+                    </a>
+                @else
+                    <button class="btn btn-outline-secondary btn-sm" disabled>
+                        <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">arrow_back</i> Saran Sebelumnya
+                    </button>
+                @endif
+            </div>
+            <a href="{{ route('leader.suggestion.notSign') . ($month ? '?month=' . urlencode($month) : '') }}" class="btn btn-sm btn-light border">
+                <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">list</i> Kembali ke Daftar
+            </a>
+            <div>
+                @if($nextId)
+                    <a href="{{ route('leader.suggestion.show', $nextId) . $navSuffix }}" class="btn btn-outline-secondary btn-sm">
+                        Saran Selanjutnya <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">arrow_forward</i>
+                    </a>
+                @else
+                    <button class="btn btn-outline-secondary btn-sm" disabled>
+                        Saran Selanjutnya <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">arrow_forward</i>
+                    </button>
+                @endif
+            </div>
+        </div>
+        @endif
+
         <div class="card table-card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h4 class="text-primary">Detail Saran</h4>
@@ -19,7 +52,8 @@
                                 <td>
                                     Member:
                                     <span class="text-primary fw-bold">
-                                        {{ $suggestion->member->nama }} ({{ $suggestion->member->nik }})
+                                        {{ optional($suggestion->member)->nama ?? '(Data tidak ditemukan)' }}
+                                        ({{ optional($suggestion->member)->nik ?? '-' }})
                                     </span>
                                 </td>
                                 <td>Team: <span class="text-primary fw-bold"> {{ $suggestion->Team_Suggestion }} </span>
@@ -298,12 +332,28 @@
                     </table>
                 </div>
 
-                <div class="text-end mt-3">
-                    <a href="{{ route('leader.suggestion') }}" class="btn btn-primary">Kembali</a>
-                    <button id="btnSaveAll" class="btn btn-primary"> Simpan </button>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <a href="{{ $source === 'not-sign' ? route('leader.suggestion.notSign') : route('leader.suggestion') }}" class="btn btn-secondary">
+                        <i class="material-icons-two-tone text-white" style="font-size:16px;vertical-align:middle;">arrow_back</i> Kembali
+                    </a>
+                    <div class="d-flex gap-2">
+                        <button id="btnSaveAll" class="btn btn-primary" data-action="save">
+                            <i class="material-icons-two-tone text-white" style="font-size:16px;vertical-align:middle;">save</i> Simpan
+                        </button>
+                        @if($source === 'not-sign' && $nextId)
+                        <button id="btnSaveAndNext" class="btn btn-success" data-action="save_and_next" data-next-id="{{ $nextId }}">
+                            Simpan & Lanjut <i class="material-icons-two-tone text-white" style="font-size:16px;vertical-align:middle;">arrow_forward</i>
+                        </button>
+                        @elseif($source === 'not-sign' && !$nextId)
+                        <button id="btnSaveAndFinish" class="btn btn-success" data-action="save_and_finish">
+                            Simpan & Selesai <i class="material-icons-two-tone text-white" style="font-size:16px;vertical-align:middle;">check_circle</i>
+                        </button>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
     </div>
     <!-- Modal Preview Foto -->
     <div class="modal fade" id="photoPreviewModal" tabindex="-1" aria-hidden="true">
@@ -384,8 +434,8 @@
                 });
             }
 
-            // ===== SAVE ALL =====
-            $('#btnSaveAll').on('click', function() {
+            // ===== FUNGSI SAVE UTAMA =====
+            function doSave(afterSaveCallback) {
                 const fields = {
                     Status_Suggestion: $('[name="Status_Suggestion"]:checked').val(),
                     Score_A_Suggestion: $('[name="Score_A_Suggestion"]:checked').val(),
@@ -398,47 +448,21 @@
                         $('[name="comment_custom"]').val() :
                         $('[name="comment_option"]:checked').val(),
                     Acceptance_First_Suggestion: true,
-                    Id_User: '{{ $user->Id_User }}' 
+                    Id_User: '{{ $user->Id_User }}'
                 };
 
                 // Hitung total skor B
                 const skorB = fields.Score_B_Suggestion;
                 const totalSkorB = (parseInt(skorB.kreatifitas) || 0) +
-                                (parseInt(skorB.ide) || 0) +
-                                (parseInt(skorB.usaha) || 0);
+                                   (parseInt(skorB.ide) || 0) +
+                                   (parseInt(skorB.usaha) || 0);
 
                 // Jika skor A atau total B > 0, set status ke 'Sudah Selesai'
                 if ((fields.Score_A_Suggestion && parseInt(fields.Score_A_Suggestion) > 0) || totalSkorB > 0) {
-                    fields.Status_Suggestion = '1'; // Sudah Selesai
+                    fields.Status_Suggestion = '1';
                 }
 
                 const requests = Object.entries(fields).map(([field, value]) => updateField(field, value));
-
-                Promise.all(requests)
-                    .then(responses => {
-                        const allSuccess = responses.every(r => r.success);
-                        if (allSuccess) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Data berhasil disimpan!',
-                                showConfirmButton: false,
-                                timer: 1500
-                            }).then(() => location.reload());
-                        } else {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Sebagian data gagal diperbarui!',
-                                text: 'Periksa koneksi atau data yang tidak valid.'
-                            });
-                        }
-                    })
-                    .catch(() => {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal menyimpan data!',
-                            text: 'Terjadi kesalahan server atau jaringan.'
-                        });
-                    });
 
                 Promise.all(requests)
                     .then(() => {
@@ -448,14 +472,56 @@
                         );
                     })
                     .then(() => {
+                        afterSaveCallback();
+                    })
+                    .catch(() => {
                         Swal.fire({
-                            icon: 'success',
-                            title: 'Data & PDF berhasil disimpan!',
-                            timer: 1500,
-                            showConfirmButton: false
-                        }).then(() => location.reload());
+                            icon: 'error',
+                            title: 'Gagal menyimpan data!',
+                            text: 'Terjadi kesalahan server atau jaringan.'
+                        });
                     });
+            }
 
+            // ===== TOMBOL: SIMPAN (Reload halaman yang sama) =====
+            $('#btnSaveAll').on('click', function() {
+                doSave(function() {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Data & PDF berhasil disimpan!',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => location.reload());
+                });
+            });
+
+            // ===== TOMBOL: SIMPAN & LANJUT (Redirect ke ID berikutnya) =====
+            $('#btnSaveAndNext').on('click', function() {
+                const nextId = $(this).data('next-id');
+                const month  = '{{ $month }}';
+                let nextUrl  = '/iseki_saran/public/leader/suggestion/' + nextId + '?source=not-sign';
+                if (month) nextUrl += '&month=' + encodeURIComponent(month);
+                doSave(function() {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Tersimpan! Lanjut ke berikutnya...',
+                        timer: 1000,
+                        showConfirmButton: false
+                    }).then(() => window.location.href = nextUrl);
+                });
+            });
+
+            // ===== TOMBOL: SIMPAN & SELESAI (Kembali ke daftar, saran habis) =====
+            $('#btnSaveAndFinish').on('click', function() {
+                doSave(function() {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Semua saran sudah dinilai!',
+                        text: 'Tidak ada saran lain yang perlu dinilai.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => window.location.href = '{{ route("leader.suggestion.notSign") }}');
+                });
             });
 
         });
