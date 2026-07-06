@@ -513,6 +513,11 @@
 
             // ===== TOMBOL: SIMPAN & SELESAI (Kembali ke daftar, saran habis) =====
             $('#btnSaveAndFinish').on('click', function() {
+                const month = '{{ $month }}';
+                let redirectUrl = '{{ route("leader.suggestion.notSign") }}';
+                if (month) {
+                    redirectUrl += '?month=' + encodeURIComponent(month);
+                }
                 doSave(function() {
                     Swal.fire({
                         icon: 'success',
@@ -520,7 +525,7 @@
                         text: 'Tidak ada saran lain yang perlu dinilai.',
                         timer: 2000,
                         showConfirmButton: false
-                    }).then(() => window.location.href = '{{ route("leader.suggestion.notSign") }}');
+                    }).then(() => window.location.href = redirectUrl);
                 });
             });
 

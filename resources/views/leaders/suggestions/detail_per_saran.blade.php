@@ -95,24 +95,31 @@
                     },
                     {
                         data: 'member_nama',
-                        name: 'employees.nama'
+                        name: 'employees.nama',
+                        defaultContent: ''
                     },
                     {
                         data: 'total_score',
                         name: 'total_score',
-                        className: 'text-center'
+                        className: 'text-center',
+                        defaultContent: 0,
+                        searchable: false,
+                        orderable: false
                     },
                     {
                         data: 'member_nik',
-                        name: 'employees.nik'
+                        name: 'employees.nik',
+                        defaultContent: ''
                     },
                     {
                         data: 'Team_Suggestion',
-                        name: 'Team_Suggestion'
+                        name: 'Team_Suggestion',
+                        defaultContent: ''
                     },
                     {
                         data: 'Content_Suggestion',
                         name: 'Content_Suggestion',
+                        defaultContent: '',
                         render: function(d) {
                             return d && d.length > 50 ? d.substr(0, 50) + '...' : (d || '');
                         }
