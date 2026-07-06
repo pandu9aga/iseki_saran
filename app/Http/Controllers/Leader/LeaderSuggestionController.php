@@ -1520,17 +1520,33 @@ class LeaderSuggestionController extends Controller
         $spreadsheet->disconnectWorksheets();
         unset($spreadsheet);
 
-        // === Convert via LibreOffice ===
+        // === Convert via LibreOffice dengan Isolated User Profile ===
         $librePath = 'C:\xampp\htdocs\iseki_saran\storage\app\LibreOfficePortable\App\libreoffice\program\soffice.exe';
+        $tempProfileDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'soffice_profile_' . uniqid();
+        $profileUrl = 'file:///' . str_replace('\\', '/', $tempProfileDir);
 
         $cmd = sprintf(
-            '"%s" --headless --convert-to pdf "%s" --outdir "%s"',
+            '"%s" --headless "-env:UserInstallation=%s" --convert-to pdf "%s" --outdir "%s"',
             $librePath,
+            $profileUrl,
             $tempXlsx,
             dirname($tempXlsx)
         );
 
         exec($cmd, $output, $resultCode);
+
+        // Helper untuk menghapus folder profil secara rekursif
+        $deleteDir = function($dirPath) use (&$deleteDir) {
+            if (!is_dir($dirPath)) return;
+            $files = array_diff(scandir($dirPath), ['.', '..']);
+            foreach ($files as $file) {
+                (is_dir("$dirPath/$file")) ? $deleteDir("$dirPath/$file") : @unlink("$dirPath/$file");
+            }
+            @rmdir($dirPath);
+        };
+
+        // Hapus folder profil sementara setelah perintah selesai dijalankan
+        $deleteDir($tempProfileDir);
 
         if ($resultCode !== 0) {
             @unlink($tempXlsx);
@@ -1629,21 +1645,12 @@ class LeaderSuggestionController extends Controller
 
         $suggestion->save();
 
-        // 7. Pembuatan PDF (Finalize)
-        if ($suggestion->Acceptance_First_Suggestion && $suggestion->Date_First_Suggestion) {
-            try {
-                $this->convertPdf($id);
-            } catch (\Exception $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Data tersimpan, tetapi konversi PDF gagal: ' . $e->getMessage()
-                ]);
-            }
-        }
+        // PDF TIDAK dibuat saat simpan — hanya data yang disimpan agar cepat.
+        // PDF di-generate terpisah via Export PDF jika diperlukan.
 
         return response()->json([
             'success' => true,
-            'message' => 'Semua data dan PDF berhasil disimpan.'
+            'message' => 'Data berhasil disimpan.'
         ]);
     }
 

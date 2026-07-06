@@ -9,7 +9,7 @@
         <div class="d-flex justify-content-between align-items-center mb-2 px-1">
             <div>
                 @if($prevId)
-                    <a href="{{ route('leader.suggestion.show', $prevId) . $navSuffix }}" class="btn btn-outline-secondary btn-sm">
+                    <a href="{{ route('leader.suggestion.show', $prevId) . $navSuffix }}" class="btn btn-outline-secondary btn-sm btn-nav-prev">
                         <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">arrow_back</i> Saran Sebelumnya
                     </a>
                 @else
@@ -18,12 +18,12 @@
                     </button>
                 @endif
             </div>
-            <a href="{{ route('leader.suggestion.notSign') . ($month ? '?month=' . urlencode($month) : '') }}" class="btn btn-sm btn-light border">
+            <a href="{{ route('leader.suggestion.notSign') . ($month ? '?month=' . urlencode($month) : '') }}" class="btn btn-sm btn-light border btn-nav-list">
                 <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">list</i> Kembali ke Daftar
             </a>
             <div>
                 @if($nextId)
-                    <a href="{{ route('leader.suggestion.show', $nextId) . $navSuffix }}" class="btn btn-outline-secondary btn-sm">
+                    <a href="{{ route('leader.suggestion.show', $nextId) . $navSuffix }}" class="btn btn-outline-secondary btn-sm btn-nav-next">
                         Saran Selanjutnya <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">arrow_forward</i>
                     </a>
                 @else
@@ -414,28 +414,12 @@
 @section('script')
     <script src="{{ asset('assets/js/jquery.min.js') }}"></script>
     <script src="{{ asset('assets/js/sweetalert2.all.min.js') }}"></script>
-
     <script>
         $(function() {
-            const updateUrl = "{{ route('leader.suggestion.updateField', $suggestion->Id_Suggestion) }}";
             const csrf = $('meta[name="csrf-token"]').attr('content');
 
-            // ===== Fungsi AJAX Global =====
-            function updateField(field, value) {
-                return $.ajax({
-                    url: updateUrl,
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({
-                        _token: csrf,
-                        field: field,
-                        value: value
-                    })
-                });
-            }
-
-            // ===== FUNGSI SAVE UTAMA =====
-            function doSave(afterSaveCallback) {
+            // ===== FUNGSI COLLECT DATA FORM =====
+            function collectFields() {
                 const fields = {
                     Status_Suggestion: $('[name="Status_Suggestion"]:checked').val(),
                     Score_A_Suggestion: $('[name="Score_A_Suggestion"]:checked').val(),
@@ -444,108 +428,102 @@
                         ide: $('[name="ide"]:checked').val(),
                         usaha: $('[name="usaha"]:checked').val()
                     },
-                    Comment_Suggestion: $('[name="comment_option"]:checked').val() === 'custom' ?
-                        $('[name="comment_custom"]').val() :
-                        $('[name="comment_option"]:checked').val(),
+                    Comment_Suggestion: $('[name="comment_option"]:checked').val() === 'custom'
+                        ? $('[name="comment_custom"]').val()
+                        : $('[name="comment_option"]:checked').val(),
                     Acceptance_First_Suggestion: true,
                     Id_User: '{{ $user->Id_User }}'
                 };
 
-                // Hitung total skor B
-                const skorB = fields.Score_B_Suggestion;
-                const totalSkorB = (parseInt(skorB.kreatifitas) || 0) +
-                                   (parseInt(skorB.ide) || 0) +
-                                   (parseInt(skorB.usaha) || 0);
+                const totalSkorB = (parseInt(fields.Score_B_Suggestion.kreatifitas) || 0) +
+                                   (parseInt(fields.Score_B_Suggestion.ide) || 0) +
+                                   (parseInt(fields.Score_B_Suggestion.usaha) || 0);
 
-                // Jika skor A atau total B > 0, set status ke 'Sudah Selesai'
                 if ((fields.Score_A_Suggestion && parseInt(fields.Score_A_Suggestion) > 0) || totalSkorB > 0) {
                     fields.Status_Suggestion = '1';
                 }
 
-                // Tampilkan loading overlay
-                Swal.fire({
-                    title: 'Menyimpan...',
-                    text: 'Sedang menyimpan data dan membuat PDF',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
+                return fields;
+            }
 
+            const saveUrl = "{{ route('leader.suggestion.saveAll', $suggestion->Id_Suggestion) }}";
+
+            // ===== AUTO-SAVE RINGAN (TANPA PDF, TANPA LOADING) =====
+            function triggerAutoSave(callback) {
                 $.ajax({
-                    url: "{{ route('leader.suggestion.saveAll', $suggestion->Id_Suggestion) }}",
+                    url: saveUrl,
                     method: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({
-                        _token: csrf,
-                        ...fields
-                    }),
+                    data: JSON.stringify({ _token: csrf, ...collectFields() }),
                     success: function(res) {
-                        Swal.close();
-                        if (res.success) {
-                            afterSaveCallback();
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Gagal menyimpan!',
-                                text: res.message || 'Terjadi kesalahan saat memproses data.'
-                            });
-                        }
+                        if (typeof callback === 'function') callback(res);
                     },
-                    error: function(xhr) {
-                        Swal.close();
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal menyimpan data!',
-                            text: 'Terjadi kesalahan server atau jaringan.'
-                        });
+                    error: function(err) {
+                        console.warn('Auto-save error:', err);
+                        if (typeof callback === 'function') callback(null);
                     }
                 });
             }
 
-            // ===== TOMBOL: SIMPAN (Reload halaman yang sama) =====
+            // Bind auto-save ke semua input form ketika berubah
+            $(document).on('change', '[name="Status_Suggestion"], [name="Score_A_Suggestion"], [name="kreatifitas"], [name="ide"], [name="usaha"], [name="comment_option"]', function() {
+                triggerAutoSave();
+            });
+            $(document).on('blur', '[name="comment_custom"]', function() {
+                triggerAutoSave();
+            });
+
+            // Bisa uncheck radio button Score_A_Suggestion dengan klik dua kali
+            let lastCheckedRadio = $('input[name="Score_A_Suggestion"]:checked')[0] || null;
+            $(document).on('click', 'input[name="Score_A_Suggestion"]', function() {
+                if (this === lastCheckedRadio) {
+                    this.checked = false;
+                    lastCheckedRadio = null;
+                } else {
+                    lastCheckedRadio = this;
+                }
+                triggerAutoSave();
+            });
+
+            // ===== NAVIGASI ATAS (PREV/NEXT/LIST) — simpan lalu langsung pindah =====
+            $('.btn-nav-prev, .btn-nav-next, .btn-nav-list').on('click', function(e) {
+                e.preventDefault();
+                const targetUrl = $(this).attr('href');
+                triggerAutoSave(function() {
+                    window.location.href = targetUrl;
+                });
+            });
+
+            // ===== TOMBOL BAWAH: SIMPAN (Reload halaman yang sama) =====
             $('#btnSaveAll').on('click', function() {
-                doSave(function() {
+                triggerAutoSave(function(res) {
                     Swal.fire({
                         icon: 'success',
-                        title: 'Data & PDF berhasil disimpan!',
-                        timer: 1500,
+                        title: 'Data berhasil disimpan!',
+                        timer: 1000,
                         showConfirmButton: false
                     }).then(() => location.reload());
                 });
             });
 
-            // ===== TOMBOL: SIMPAN & LANJUT (Redirect ke ID berikutnya) =====
+            // ===== TOMBOL BAWAH: SIMPAN & LANJUT =====
             $('#btnSaveAndNext').on('click', function() {
                 const nextId = $(this).data('next-id');
                 const month  = '{{ $month }}';
                 let nextUrl  = '/iseki_saran/public/leader/suggestion/' + nextId + '?source=not-sign';
                 if (month) nextUrl += '&month=' + encodeURIComponent(month);
-                doSave(function() {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Tersimpan! Lanjut ke berikutnya...',
-                        timer: 1000,
-                        showConfirmButton: false
-                    }).then(() => window.location.href = nextUrl);
+                triggerAutoSave(function() {
+                    window.location.href = nextUrl;
                 });
             });
 
-            // ===== TOMBOL: SIMPAN & SELESAI (Kembali ke daftar, saran habis) =====
+            // ===== TOMBOL BAWAH: SIMPAN & SELESAI =====
             $('#btnSaveAndFinish').on('click', function() {
                 const month = '{{ $month }}';
                 let redirectUrl = '{{ route("leader.suggestion.notSign") }}';
-                if (month) {
-                    redirectUrl += '?month=' + encodeURIComponent(month);
-                }
-                doSave(function() {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Semua saran sudah dinilai!',
-                        text: 'Tidak ada saran lain yang perlu dinilai.',
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => window.location.href = redirectUrl);
+                if (month) redirectUrl += '?month=' + encodeURIComponent(month);
+                triggerAutoSave(function() {
+                    window.location.href = redirectUrl;
                 });
             });
 
@@ -636,22 +614,6 @@
         $('[name="kreatifitas"], [name="ide"], [name="usaha"]').on('change', checkAndSetStatus);
     });
 
-    document.addEventListener('DOMContentLoaded', function() {
-        let lastCheckedRadio = null;
-
-        const scoreARadios = document.querySelectorAll('input[name="Score_A_Suggestion"]');
-        scoreARadios.forEach(radio => {
-            radio.addEventListener('click', function(e) {
-                if (this === lastCheckedRadio) {
-                    this.checked = false;
-                    lastCheckedRadio = null;
-                    updateField(this.dataset.field, null);
-                } else {
-                    lastCheckedRadio = this;
-                    updateField(this.dataset.field, this.value);
-                }
-            });
-        });
-    });
+    // (Auto-save logic moved inside jQuery ready block)
     </script>
 @endsection
