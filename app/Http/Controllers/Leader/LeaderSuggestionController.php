@@ -1579,6 +1579,74 @@ class LeaderSuggestionController extends Controller
         ]);
     }
 
+    public function saveAll(Request $request, $id)
+    {
+        $suggestion = Suggestion::findOrFail($id);
+
+        // 1. Update Status
+        if ($request->has('Status_Suggestion')) {
+            $suggestion->Status_Suggestion = $request->input('Status_Suggestion');
+        }
+
+        // 2. Update Score A
+        if ($request->has('Score_A_Suggestion')) {
+            $val = $request->input('Score_A_Suggestion');
+            $suggestion->Score_A_Suggestion = ($val === null || $val === '' || $val === 'null') ? null : $val;
+        }
+
+        // 3. Update Score B
+        if ($request->has('Score_B_Suggestion')) {
+            $scoreB = $request->input('Score_B_Suggestion');
+            if (is_string($scoreB)) {
+                $decoded = json_decode($scoreB, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $scoreB = $decoded;
+                }
+            }
+            if (!is_array($scoreB)) {
+                $scoreB = [$scoreB];
+            }
+            $suggestion->Score_B_Suggestion = json_encode($scoreB);
+        }
+
+        // 4. Update Comment
+        if ($request->has('Comment_Suggestion')) {
+            $suggestion->Comment_Suggestion = $request->input('Comment_Suggestion');
+        }
+
+        // 5. Update Id_User
+        if ($request->has('Id_User')) {
+            $suggestion->Id_User = $request->input('Id_User');
+        }
+
+        // 6. Update Acceptance_First_Suggestion
+        if ($request->has('Acceptance_First_Suggestion')) {
+            if (!$suggestion->Acceptance_First_Suggestion) {
+                $next = (Suggestion::max('Acceptance_First_Suggestion') ?? 0) + 1;
+                $suggestion->Acceptance_First_Suggestion = $next;
+            }
+        }
+
+        $suggestion->save();
+
+        // 7. Pembuatan PDF (Finalize)
+        if ($suggestion->Acceptance_First_Suggestion && $suggestion->Date_First_Suggestion) {
+            try {
+                $this->convertPdf($id);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data tersimpan, tetapi konversi PDF gagal: ' . $e->getMessage()
+                ]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Semua data dan PDF berhasil disimpan.'
+        ]);
+    }
+
     public function exportAllPdf(Request $request)
     {
         $bulan = $request->get('Month'); // format Y-m

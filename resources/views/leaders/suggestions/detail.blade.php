@@ -462,25 +462,45 @@
                     fields.Status_Suggestion = '1';
                 }
 
-                const requests = Object.entries(fields).map(([field, value]) => updateField(field, value));
+                // Tampilkan loading overlay
+                Swal.fire({
+                    title: 'Menyimpan...',
+                    text: 'Sedang menyimpan data dan membuat PDF',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
 
-                Promise.all(requests)
-                    .then(() => {
-                        return $.post(
-                            "{{ route('leader.suggestion.finalize', $suggestion->Id_Suggestion) }}",
-                            { _token: csrf }
-                        );
-                    })
-                    .then(() => {
-                        afterSaveCallback();
-                    })
-                    .catch(() => {
+                $.ajax({
+                    url: "{{ route('leader.suggestion.saveAll', $suggestion->Id_Suggestion) }}",
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        _token: csrf,
+                        ...fields
+                    }),
+                    success: function(res) {
+                        Swal.close();
+                        if (res.success) {
+                            afterSaveCallback();
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal menyimpan!',
+                                text: res.message || 'Terjadi kesalahan saat memproses data.'
+                            });
+                        }
+                    },
+                    error: function(xhr) {
+                        Swal.close();
                         Swal.fire({
                             icon: 'error',
                             title: 'Gagal menyimpan data!',
                             text: 'Terjadi kesalahan server atau jaringan.'
                         });
-                    });
+                    }
+                });
             }
 
             // ===== TOMBOL: SIMPAN (Reload halaman yang sama) =====
