@@ -326,7 +326,7 @@ class LeaderSuggestionController extends Controller
     }
 
     // detail saran
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $page = 'suggestion';
 
@@ -341,12 +341,59 @@ class LeaderSuggestionController extends Controller
         $contentPhotos = json_decode($suggestion->Content_Photos_Suggestion, true) ?? [];
         $improvementPhotos = json_decode($suggestion->Improvement_Photos_Suggestion, true) ?? [];
 
+        // Navigasi Prev/Next — hanya di antara saran "belum dinilai" (belum ada Id_User)
+        $source = $request->query('source', '');
+        $month  = $request->query('month', '');  // format: yyyy-mm, dari halaman not-sign
+        $prevId = null;
+        $nextId = null;
+
+        if ($source === 'not-sign') {
+            // Ambil semua ID saran belum dinilai dengan urutan yang SAMA
+            // seperti halaman "Belum Dinilai": NIK member ASC, lalu tanggal penyerahan awal ASC
+            $rifaDb = config('database.connections.rifa.database');
+
+            $orderedQuery = Suggestion::select('suggestions.Id_Suggestion')
+                ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
+                ->whereNull('suggestions.Id_User')
+                ->orderBy($rifaDb . '.employees.nik', 'asc')
+                ->orderBy('suggestions.Date_First_Suggestion', 'asc');
+
+            // Filter berdasarkan bulan (sama seperti filter di halaman not-sign)
+            if ($month) {
+                try {
+                    [$year, $mon] = explode('-', $month);
+                    $startDate = Carbon::createFromDate($year, $mon, 1)->startOfMonth();
+                    $endDate   = Carbon::createFromDate($year, $mon, 1)->endOfMonth();
+                    $orderedQuery->whereBetween('suggestions.Date_First_Suggestion', [$startDate, $endDate]);
+                } catch (\Exception $e) {
+                    // abaikan jika format salah
+                }
+            }
+
+            $orderedIds = $orderedQuery->pluck('suggestions.Id_Suggestion')->toArray();
+
+            // Cari posisi ID saat ini dalam daftar terurut tersebut
+            $currentPos = array_search((int) $id, array_map('intval', $orderedIds));
+
+            $prevId = ($currentPos !== false && $currentPos > 0)
+                ? $orderedIds[$currentPos - 1]
+                : null;
+
+            $nextId = ($currentPos !== false && $currentPos < count($orderedIds) - 1)
+                ? $orderedIds[$currentPos + 1]
+                : null;
+        }
+
         return view('leaders.suggestions.detail', [
-            'page' => $page,
-            'user' => $user,
-            'suggestion' => $suggestion,
-            'contentPhotos' => $contentPhotos,
+            'page'              => $page,
+            'user'              => $user,
+            'suggestion'        => $suggestion,
+            'contentPhotos'     => $contentPhotos,
             'improvementPhotos' => $improvementPhotos,
+            'prevId'            => $prevId,
+            'nextId'            => $nextId,
+            'source'            => $source,
+            'month'             => $month,
         ]);
     }
 
@@ -1087,8 +1134,8 @@ class LeaderSuggestionController extends Controller
                     ? str_pad($row->Acceptance_Last_Suggestion, 5, '0', STR_PAD_LEFT)
                     : ''
             )
-            ->addColumn('action', fn ($row) => '
-                <a href="'.route('leader.suggestion.show', $row->Id_Suggestion).'" class="btn btn-sm btn-primary">
+            ->addColumn('action', fn($row) => '
+                <a href="' . route('leader.suggestion.show', $row->Id_Suggestion) . '?source=not-sign&month=' . urlencode($monthInput ?? '') . '" class="btn btn-sm btn-primary">
                     <span class="pc-micon"><i class="material-icons-two-tone text-white">edit</i></span>
                 </a>
                 <button class="btn btn-sm btn-danger delete-btn" 
@@ -1483,17 +1530,33 @@ class LeaderSuggestionController extends Controller
         $spreadsheet->disconnectWorksheets();
         unset($spreadsheet);
 
-        // === Convert via LibreOffice ===
+        // === Convert via LibreOffice dengan Isolated User Profile ===
         $librePath = 'C:\xampp\htdocs\iseki_saran\storage\app\LibreOfficePortable\App\libreoffice\program\soffice.exe';
+        $tempProfileDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'soffice_profile_' . uniqid();
+        $profileUrl = 'file:///' . str_replace('\\', '/', $tempProfileDir);
 
         $cmd = sprintf(
-            '"%s" --headless --convert-to pdf "%s" --outdir "%s"',
+            '"%s" --headless "-env:UserInstallation=%s" --convert-to pdf "%s" --outdir "%s"',
             $librePath,
+            $profileUrl,
             $tempXlsx,
             dirname($tempXlsx)
         );
 
         exec($cmd, $output, $resultCode);
+
+        // Helper untuk menghapus folder profil secara rekursif
+        $deleteDir = function($dirPath) use (&$deleteDir) {
+            if (!is_dir($dirPath)) return;
+            $files = array_diff(scandir($dirPath), ['.', '..']);
+            foreach ($files as $file) {
+                (is_dir("$dirPath/$file")) ? $deleteDir("$dirPath/$file") : @unlink("$dirPath/$file");
+            }
+            @rmdir($dirPath);
+        };
+
+        // Hapus folder profil sementara setelah perintah selesai dijalankan
+        $deleteDir($tempProfileDir);
 
         if ($resultCode !== 0) {
             @unlink($tempXlsx);
@@ -1539,6 +1602,65 @@ class LeaderSuggestionController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'PDF berhasil dibuat',
+        ]);
+    }
+
+    public function saveAll(Request $request, $id)
+    {
+        $suggestion = Suggestion::findOrFail($id);
+
+        // 1. Update Status
+        if ($request->has('Status_Suggestion')) {
+            $suggestion->Status_Suggestion = $request->input('Status_Suggestion');
+        }
+
+        // 2. Update Score A
+        if ($request->has('Score_A_Suggestion')) {
+            $val = $request->input('Score_A_Suggestion');
+            $suggestion->Score_A_Suggestion = ($val === null || $val === '' || $val === 'null') ? null : $val;
+        }
+
+        // 3. Update Score B
+        if ($request->has('Score_B_Suggestion')) {
+            $scoreB = $request->input('Score_B_Suggestion');
+            if (is_string($scoreB)) {
+                $decoded = json_decode($scoreB, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $scoreB = $decoded;
+                }
+            }
+            if (!is_array($scoreB)) {
+                $scoreB = [$scoreB];
+            }
+            $suggestion->Score_B_Suggestion = json_encode($scoreB);
+        }
+
+        // 4. Update Comment
+        if ($request->has('Comment_Suggestion')) {
+            $suggestion->Comment_Suggestion = $request->input('Comment_Suggestion');
+        }
+
+        // 5. Update Id_User
+        if ($request->has('Id_User')) {
+            $suggestion->Id_User = $request->input('Id_User');
+        }
+
+        // 6. Update Acceptance_First_Suggestion
+        if ($request->has('Acceptance_First_Suggestion')) {
+            if (!$suggestion->Acceptance_First_Suggestion) {
+                $next = (Suggestion::max('Acceptance_First_Suggestion') ?? 0) + 1;
+                $suggestion->Acceptance_First_Suggestion = $next;
+            }
+        }
+
+        $suggestion->save();
+
+        // PDF TIDAK dibuat saat simpan — hanya data yang disimpan agar cepat.
+        // PDF di-generate terpisah via Export PDF jika diperlukan.
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data berhasil disimpan.'
         ]);
     }
 

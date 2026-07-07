@@ -2,6 +2,39 @@
 
 @section('content')
     <div class="col-sm-12">
+
+        {{-- Panel Navigasi Prev/Next (hanya muncul jika datang dari halaman Belum Dinilai) --}}
+        @if($source === 'not-sign')
+        @php $navSuffix = '?source=not-sign' . ($month ? '&month=' . urlencode($month) : ''); @endphp
+        <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+            <div>
+                @if($prevId)
+                    <a href="{{ route('leader.suggestion.show', $prevId) . $navSuffix }}" class="btn btn-outline-secondary btn-sm btn-nav-prev">
+                        <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">arrow_back</i> Saran Sebelumnya
+                    </a>
+                @else
+                    <button class="btn btn-outline-secondary btn-sm" disabled>
+                        <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">arrow_back</i> Saran Sebelumnya
+                    </button>
+                @endif
+            </div>
+            <a href="{{ route('leader.suggestion.notSign') . ($month ? '?month=' . urlencode($month) : '') }}" class="btn btn-sm btn-light border btn-nav-list">
+                <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">list</i> Kembali ke Daftar
+            </a>
+            <div>
+                @if($nextId)
+                    <a href="{{ route('leader.suggestion.show', $nextId) . $navSuffix }}" class="btn btn-outline-secondary btn-sm btn-nav-next">
+                        Saran Selanjutnya <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">arrow_forward</i>
+                    </a>
+                @else
+                    <button class="btn btn-outline-secondary btn-sm" disabled>
+                        Saran Selanjutnya <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">arrow_forward</i>
+                    </button>
+                @endif
+            </div>
+        </div>
+        @endif
+
         <div class="card table-card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h4 class="text-primary">Detail Saran</h4>
@@ -19,7 +52,8 @@
                                 <td>
                                     Member:
                                     <span class="text-primary fw-bold">
-                                        {{ $suggestion->member->nama }} ({{ $suggestion->member->nik }})
+                                        {{ optional($suggestion->member)->nama ?? '(Data tidak ditemukan)' }}
+                                        ({{ optional($suggestion->member)->nik ?? '-' }})
                                     </span>
                                 </td>
                                 <td>Team: <span class="text-primary fw-bold"> {{ $suggestion->Team_Suggestion }} </span>
@@ -298,12 +332,28 @@
                     </table>
                 </div>
 
-                <div class="text-end mt-3">
-                    <a href="{{ route('leader.suggestion') }}" class="btn btn-primary">Kembali</a>
-                    <button id="btnSaveAll" class="btn btn-primary"> Simpan </button>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <a href="{{ $source === 'not-sign' ? route('leader.suggestion.notSign') : route('leader.suggestion') }}" class="btn btn-secondary">
+                        <i class="material-icons-two-tone text-white" style="font-size:16px;vertical-align:middle;">arrow_back</i> Kembali
+                    </a>
+                    <div class="d-flex gap-2">
+                        <button id="btnSaveAll" class="btn btn-primary" data-action="save">
+                            <i class="material-icons-two-tone text-white" style="font-size:16px;vertical-align:middle;">save</i> Simpan
+                        </button>
+                        @if($source === 'not-sign' && $nextId)
+                        <button id="btnSaveAndNext" class="btn btn-success" data-action="save_and_next" data-next-id="{{ $nextId }}">
+                            Simpan & Lanjut <i class="material-icons-two-tone text-white" style="font-size:16px;vertical-align:middle;">arrow_forward</i>
+                        </button>
+                        @elseif($source === 'not-sign' && !$nextId)
+                        <button id="btnSaveAndFinish" class="btn btn-success" data-action="save_and_finish">
+                            Simpan & Selesai <i class="material-icons-two-tone text-white" style="font-size:16px;vertical-align:middle;">check_circle</i>
+                        </button>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
     </div>
     <!-- Modal Preview Foto -->
     <div class="modal fade" id="photoPreviewModal" tabindex="-1" aria-hidden="true">
@@ -364,28 +414,12 @@
 @section('script')
     <script src="{{ asset('assets/js/jquery.min.js') }}"></script>
     <script src="{{ asset('assets/js/sweetalert2.all.min.js') }}"></script>
-
     <script>
         $(function() {
-            const updateUrl = "{{ route('leader.suggestion.updateField', $suggestion->Id_Suggestion) }}";
             const csrf = $('meta[name="csrf-token"]').attr('content');
 
-            // ===== Fungsi AJAX Global =====
-            function updateField(field, value) {
-                return $.ajax({
-                    url: updateUrl,
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({
-                        _token: csrf,
-                        field: field,
-                        value: value
-                    })
-                });
-            }
-
-            // ===== SAVE ALL =====
-            $('#btnSaveAll').on('click', function() {
+            // ===== FUNGSI COLLECT DATA FORM =====
+            function collectFields() {
                 const fields = {
                     Status_Suggestion: $('[name="Status_Suggestion"]:checked').val(),
                     Score_A_Suggestion: $('[name="Score_A_Suggestion"]:checked').val(),
@@ -394,68 +428,103 @@
                         ide: $('[name="ide"]:checked').val(),
                         usaha: $('[name="usaha"]:checked').val()
                     },
-                    Comment_Suggestion: $('[name="comment_option"]:checked').val() === 'custom' ?
-                        $('[name="comment_custom"]').val() :
-                        $('[name="comment_option"]:checked').val(),
+                    Comment_Suggestion: $('[name="comment_option"]:checked').val() === 'custom'
+                        ? $('[name="comment_custom"]').val()
+                        : $('[name="comment_option"]:checked').val(),
                     Acceptance_First_Suggestion: true,
-                    Id_User: '{{ $user->Id_User }}' 
+                    Id_User: '{{ $user->Id_User }}'
                 };
 
-                // Hitung total skor B
-                const skorB = fields.Score_B_Suggestion;
-                const totalSkorB = (parseInt(skorB.kreatifitas) || 0) +
-                                (parseInt(skorB.ide) || 0) +
-                                (parseInt(skorB.usaha) || 0);
+                const totalSkorB = (parseInt(fields.Score_B_Suggestion.kreatifitas) || 0) +
+                                   (parseInt(fields.Score_B_Suggestion.ide) || 0) +
+                                   (parseInt(fields.Score_B_Suggestion.usaha) || 0);
 
-                // Jika skor A atau total B > 0, set status ke 'Sudah Selesai'
                 if ((fields.Score_A_Suggestion && parseInt(fields.Score_A_Suggestion) > 0) || totalSkorB > 0) {
-                    fields.Status_Suggestion = '1'; // Sudah Selesai
+                    fields.Status_Suggestion = '1';
                 }
 
-                const requests = Object.entries(fields).map(([field, value]) => updateField(field, value));
+                return fields;
+            }
 
-                Promise.all(requests)
-                    .then(responses => {
-                        const allSuccess = responses.every(r => r.success);
-                        if (allSuccess) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Data berhasil disimpan!',
-                                showConfirmButton: false,
-                                timer: 1500
-                            }).then(() => location.reload());
-                        } else {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Sebagian data gagal diperbarui!',
-                                text: 'Periksa koneksi atau data yang tidak valid.'
-                            });
-                        }
-                    })
-                    .catch(() => {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal menyimpan data!',
-                            text: 'Terjadi kesalahan server atau jaringan.'
-                        });
-                    });
+            const saveUrl = "{{ route('leader.suggestion.saveAll', $suggestion->Id_Suggestion) }}";
 
-                Promise.all(requests)
-                    .then(() => {
-                        return $.post(
-                            "{{ route('leader.suggestion.finalize', $suggestion->Id_Suggestion) }}",
-                            { _token: csrf }
-                        );
-                    })
-                    .then(() => {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Data & PDF berhasil disimpan!',
-                            timer: 1500,
-                            showConfirmButton: false
-                        }).then(() => location.reload());
-                    });
+            // ===== AUTO-SAVE RINGAN (TANPA PDF, TANPA LOADING) =====
+            function triggerAutoSave(callback) {
+                $.ajax({
+                    url: saveUrl,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ _token: csrf, ...collectFields() }),
+                    success: function(res) {
+                        if (typeof callback === 'function') callback(res);
+                    },
+                    error: function(err) {
+                        console.warn('Auto-save error:', err);
+                        if (typeof callback === 'function') callback(null);
+                    }
+                });
+            }
 
+            // Bind auto-save ke semua input form ketika berubah
+            $(document).on('change', '[name="Status_Suggestion"], [name="Score_A_Suggestion"], [name="kreatifitas"], [name="ide"], [name="usaha"], [name="comment_option"]', function() {
+                triggerAutoSave();
+            });
+            $(document).on('blur', '[name="comment_custom"]', function() {
+                triggerAutoSave();
+            });
+
+            // Bisa uncheck radio button Score_A_Suggestion dengan klik dua kali
+            let lastCheckedRadio = $('input[name="Score_A_Suggestion"]:checked')[0] || null;
+            $(document).on('click', 'input[name="Score_A_Suggestion"]', function() {
+                if (this === lastCheckedRadio) {
+                    this.checked = false;
+                    lastCheckedRadio = null;
+                } else {
+                    lastCheckedRadio = this;
+                }
+                triggerAutoSave();
+            });
+
+            // ===== NAVIGASI ATAS (PREV/NEXT/LIST) — simpan lalu langsung pindah =====
+            $('.btn-nav-prev, .btn-nav-next, .btn-nav-list').on('click', function(e) {
+                e.preventDefault();
+                const targetUrl = $(this).attr('href');
+                triggerAutoSave(function() {
+                    window.location.href = targetUrl;
+                });
+            });
+
+            // ===== TOMBOL BAWAH: SIMPAN (Reload halaman yang sama) =====
+            $('#btnSaveAll').on('click', function() {
+                triggerAutoSave(function(res) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Data berhasil disimpan!',
+                        timer: 1000,
+                        showConfirmButton: false
+                    }).then(() => location.reload());
+                });
+            });
+
+            // ===== TOMBOL BAWAH: SIMPAN & LANJUT =====
+            $('#btnSaveAndNext').on('click', function() {
+                const nextId = $(this).data('next-id');
+                const month  = '{{ $month }}';
+                let nextUrl  = '/iseki_saran/public/leader/suggestion/' + nextId + '?source=not-sign';
+                if (month) nextUrl += '&month=' + encodeURIComponent(month);
+                triggerAutoSave(function() {
+                    window.location.href = nextUrl;
+                });
+            });
+
+            // ===== TOMBOL BAWAH: SIMPAN & SELESAI =====
+            $('#btnSaveAndFinish').on('click', function() {
+                const month = '{{ $month }}';
+                let redirectUrl = '{{ route("leader.suggestion.notSign") }}';
+                if (month) redirectUrl += '?month=' + encodeURIComponent(month);
+                triggerAutoSave(function() {
+                    window.location.href = redirectUrl;
+                });
             });
 
         });
@@ -545,22 +614,6 @@
         $('[name="kreatifitas"], [name="ide"], [name="usaha"]').on('change', checkAndSetStatus);
     });
 
-    document.addEventListener('DOMContentLoaded', function() {
-        let lastCheckedRadio = null;
-
-        const scoreARadios = document.querySelectorAll('input[name="Score_A_Suggestion"]');
-        scoreARadios.forEach(radio => {
-            radio.addEventListener('click', function(e) {
-                if (this === lastCheckedRadio) {
-                    this.checked = false;
-                    lastCheckedRadio = null;
-                    updateField(this.dataset.field, null);
-                } else {
-                    lastCheckedRadio = this;
-                    updateField(this.dataset.field, this.value);
-                }
-            });
-        });
-    });
+    // (Auto-save logic moved inside jQuery ready block)
     </script>
 @endsection
