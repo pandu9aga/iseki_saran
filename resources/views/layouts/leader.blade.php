@@ -103,6 +103,12 @@
                             <span class="pc-mtext">Record Nilai</span>
                         </a>
                     </li>
+                    <li class="pc-item {{ $page === 'rangkuman' ? 'active' : '' }}">
+                        <a href="{{ route('leader.suggestion.rangkuman') }}" class="pc-link">
+                            <span class="pc-micon"><i class="ph ph-chart-line"></i></span>
+                            <span class="pc-mtext">Rangkuman</span>
+                        </a>
+                    </li>
 
                     <li class="pc-item pc-caption">
                         <label>Data</label>

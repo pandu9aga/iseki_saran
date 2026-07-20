@@ -17,6 +17,11 @@ Route::get('/leader-suggestions-data', [LeaderSuggestionController::class, 'getS
 Route::get('/leader-suggestions-data-month', [LeaderSuggestionController::class, 'getSuggestionsMonth'])->name('leader.suggestions.data.month');
 Route::get('/leader/suggestion/not-submit/data', [LeaderSuggestionController::class, 'notSubmitData'])->name('leader.suggestion.notSubmit.data');
 Route::get('/leader/suggestion/not-sign/data', [LeaderSuggestionController::class, 'notSignData'])->name('leader.suggestion.notSign.data');
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user();
+});
+
+Route::post('/internal/generate-pdf/{id}', [\App\Http\Controllers\Leader\LeaderSuggestionController::class, 'generatePdfInternal']);
 Route::get('/suggestions-data', [SuggestionController::class, 'getSuggestions'])->name('suggestions.data');
 
 

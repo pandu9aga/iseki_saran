@@ -271,7 +271,17 @@
                             <tr>
                                 <th class="col-2">Total Skor</th>
                                 <td id="totalAkhir"><strong>{{ $suggestion->total_score ?? '-' }}</strong></td>
+                            </tr>
 
+                            {{-- Jam Perbaikan --}}
+                            <tr>
+                                <th>Jam Perbaikan</th>
+                                <td>
+                                    {{ $suggestion->Hour_Suggestion ?? '-' }}
+                                    @if($suggestion->Hour_Suggestion)
+                                        jam
+                                    @endif
+                                </td>
                             </tr>
 
                             {{-- Leader --}}

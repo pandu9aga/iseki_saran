@@ -17,6 +17,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use setasign\Fpdi\Fpdi;
 use Yajra\DataTables\Facades\DataTables;
+use App\Services\SuggestionPdfService;
 
 class LeaderSuggestionController extends Controller
 {
@@ -67,7 +68,8 @@ class LeaderSuggestionController extends Controller
             'suggestions.Id_User',
             'suggestions.Acceptance_First_Suggestion',
             'suggestions.Acceptance_Last_Suggestion',
-            $rifaDb.'.employees.nama as member_nama',
+            'suggestions.Hour_Suggestion',
+            $rifaDb . '.employees.nama as member_nama',
             'users.Name_User as user_name',
         ])
             ->leftJoin($rifaDb.'.employees', $rifaDb.'.employees.id', '=', 'suggestions.Id_Member')
@@ -192,7 +194,8 @@ class LeaderSuggestionController extends Controller
             'suggestions.Id_User',
             'suggestions.Acceptance_First_Suggestion',
             'suggestions.Acceptance_Last_Suggestion',
-            $rifaDb.'.employees.nama as member_nama',
+            'suggestions.Hour_Suggestion',
+            $rifaDb . '.employees.nama as member_nama',
             'users.Name_User as user_name',
         ])
             ->leftJoin($rifaDb.'.employees', $rifaDb.'.employees.id', '=', 'suggestions.Id_Member')
@@ -318,6 +321,7 @@ class LeaderSuggestionController extends Controller
             'Content_Suggestion' => $request->Content_Suggestion,
             'Date_First_Suggestion' => Carbon::today(),
             'Status_Suggestion' => 0,
+            'Hour_Suggestion' => $request->Hour_Suggestion,
             // 'Acceptance_First_Suggestion' => $newNumber,
         ]);
 
@@ -425,6 +429,7 @@ class LeaderSuggestionController extends Controller
             'Id_User',
             'Acceptance_First_Suggestion',
             'Acceptance_Last_Suggestion',
+            'Hour_Suggestion'
         ];
 
         if (! in_array($field, $allowed)) {
@@ -1046,8 +1051,9 @@ class LeaderSuggestionController extends Controller
             'suggestions.Id_User',
             'suggestions.Acceptance_First_Suggestion',
             'suggestions.Acceptance_Last_Suggestion',
-            $rifaDb.'.employees.nama as member_nama',
-            $rifaDb.'.employees.nik as member_nik',
+            'suggestions.Hour_Suggestion',
+            $rifaDb . '.employees.nama as member_nama',
+            $rifaDb . '.employees.nik as member_nik',
             'users.Name_User as user_name',
         ])
             ->leftJoin($rifaDb.'.employees', $rifaDb.'.employees.id', '=', 'suggestions.Id_Member')
@@ -1155,6 +1161,32 @@ class LeaderSuggestionController extends Controller
             ->make(true);
     }
 
+    /**
+     * Generate PDF secara sinkron (untuk finalize manual).
+     */
+    public function generatePdfInternal($id)
+    {
+        ignore_user_abort(true);
+        set_time_limit(0);
+
+        // Tutup koneksi sehingga respons terkirim ke klien segera (di php-fpm)
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        try {
+            $pdfService = app(\App\Services\SuggestionPdfService::class);
+            $pdfService->generate((int) $id);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("PDF Gen Internal Error: " . $e->getMessage());
+        }
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    /**
+     * @deprecated Sudah digantikan dengan service class.
+     */
     public function convertPdf($id): void
     {
         $suggestion = Suggestion::with(['user', 'member'])->find($id);
@@ -1579,30 +1611,38 @@ class LeaderSuggestionController extends Controller
 
         // === Cleanup ===
         @unlink($tempXlsx);
+        $pdfService = app(SuggestionPdfService::class);
+        $pdfService->generate((int) $id);
     }
 
     public function finalizeSuggestion($id)
     {
         $suggestion = Suggestion::findOrFail($id);
 
-        // validasi minimal data penting
-        if (
-            ! $suggestion->Acceptance_First_Suggestion ||
-            ! $suggestion->Date_First_Suggestion
-        ) {
+        // Validasi minimal data penting
+        if (!$suggestion->Acceptance_First_Suggestion || !$suggestion->Date_First_Suggestion) {
             return response()->json([
                 'success' => false,
                 'message' => 'Data belum lengkap untuk generate PDF',
             ]);
         }
 
-        // PANGGIL PDF DI SINI (1x SAJA)
-        $this->convertPdf($id);
+        // Generate PDF sinkron (ada loading indicator di UI)
+        try {
+            $pdfService = app(SuggestionPdfService::class);
+            $pdfService->generate((int) $id);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'PDF berhasil dibuat',
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'PDF berhasil dibuat'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('finalizeSuggestion gagal: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal generate PDF: ' . $e->getMessage()
+            ]);
+        }
     }
 
     public function saveAll(Request $request, $id)
@@ -1645,7 +1685,7 @@ class LeaderSuggestionController extends Controller
             $suggestion->Id_User = $request->input('Id_User');
         }
 
-        // 6. Update Acceptance_First_Suggestion
+        // 6. Assign Acceptance_First_Suggestion (jika belum ada)
         if ($request->has('Acceptance_First_Suggestion')) {
             if (!$suggestion->Acceptance_First_Suggestion) {
                 $next = (Suggestion::max('Acceptance_First_Suggestion') ?? 0) + 1;
@@ -1653,10 +1693,27 @@ class LeaderSuggestionController extends Controller
             }
         }
 
+        // 7. Update Hour_Suggestion
+        if ($request->has('Hour_Suggestion')) {
+            $val = $request->input('Hour_Suggestion');
+            $suggestion->Hour_Suggestion = ($val === null || $val === '' || $val === 'null') ? null : $val;
+        }
+
+        // Simpan ke database — ini yang harus cepat
         $suggestion->save();
 
-        // PDF TIDAK dibuat saat simpan — hanya data yang disimpan agar cepat.
-        // PDF di-generate terpisah via Export PDF jika diperlukan.
+        // ─── Dispatch PDF generation ke background (non-blocking) ───
+        // PDF akan dibuat di background oleh artisan command.
+        // Response dikembalikan SEBELUM LibreOffice selesai, sehingga save tidak lemot.
+        if ($suggestion->Acceptance_First_Suggestion && $suggestion->Date_First_Suggestion) {
+            try {
+                $pdfService = app(SuggestionPdfService::class);
+                $pdfService->dispatchBackground((int) $id);
+            } catch (\Exception $e) {
+                // Jika dispatch background gagal, log saja — tidak memblokir response
+                \Log::warning('Gagal dispatch background PDF (ID ' . $id . '): ' . $e->getMessage());
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -1670,7 +1727,7 @@ class LeaderSuggestionController extends Controller
         $team = $request->get('Team');  // optional: filter per divisi
         $dir = public_path("uploads/pdf/{$bulan}");
 
-        if (! is_dir($dir)) {
+        if (!is_dir($dir)) {
             return back()->with('error', 'Folder PDF tidak ditemukan');
         }
 
@@ -2083,9 +2140,75 @@ class LeaderSuggestionController extends Controller
         $Id_User = session('Id_User');
         $user = User::find($Id_User);
         $currentDate = Carbon::now();
-        $monthInput = $currentDate->format('Y-m');
+        $monthInput = request('Month', $currentDate->format('Y-m'));
 
-        return view('leaders.suggestions.detail_per_saran', compact('page', 'user', 'monthInput'));
+        [$year, $month] = explode('-', $monthInput);
+        $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth();
+
+        // Total jam perbaikan
+        $totalJam = Suggestion::whereNotNull('Id_User')
+            ->whereBetween('Date_First_Suggestion', [$startDate, $endDate])
+            ->sum('Hour_Suggestion');
+
+        // Saran per nilai (total_score dikelompokkan)
+        $saran = Suggestion::select([
+            'suggestions.Score_A_Suggestion',
+            'suggestions.Score_B_Suggestion',
+        ])
+            ->whereNotNull('suggestions.Id_User')
+            ->whereBetween('suggestions.Date_First_Suggestion', [$startDate, $endDate])
+            ->get();
+
+        $perNilai = [0 => 0, 1 => 0, 2 => 0, 3 => 0, 4 => 0, 'lebih5' => 0];
+        foreach ($saran as $s) {
+            $scoreA = $s->Score_A_Suggestion ?? 0;
+            $scoreB = 0;
+            if ($s->Score_B_Suggestion) {
+                $scores = json_decode($s->Score_B_Suggestion, true);
+                if (is_array($scores)) {
+                    $scoreB = ($scores['kreatifitas'] ?? 0) + ($scores['ide'] ?? 0) + ($scores['usaha'] ?? 0);
+                }
+            }
+            $total = $scoreA + $scoreB;
+            if ($total >= 5) {
+                $perNilai['lebih5']++;
+            } elseif (isset($perNilai[$total])) {
+                $perNilai[$total]++;
+            }
+        }
+
+        // Saran per tema
+        $perTema = Suggestion::select('Theme_Suggestion', DB::raw('COUNT(*) as total'))
+            ->whereNotNull('Id_User')
+            ->whereBetween('Date_First_Suggestion', [$startDate, $endDate])
+            ->groupBy('Theme_Suggestion')
+            ->pluck('total', 'Theme_Suggestion')
+            ->toArray();
+
+        // No penerimaan pertama dan terakhir
+        $firstAcc = Suggestion::whereNotNull('Acceptance_First_Suggestion')
+            ->whereNotNull('Id_User')
+            ->whereBetween('Date_First_Suggestion', [$startDate, $endDate])
+            ->orderBy('Acceptance_First_Suggestion', 'asc')
+            ->value('Acceptance_First_Suggestion');
+
+        $lastAcc = Suggestion::whereNotNull('Acceptance_First_Suggestion')
+            ->whereNotNull('Id_User')
+            ->whereBetween('Date_First_Suggestion', [$startDate, $endDate])
+            ->orderBy('Acceptance_First_Suggestion', 'desc')
+            ->value('Acceptance_First_Suggestion');
+
+        return view('leaders.suggestions.detail_per_saran', compact(
+            'page',
+            'user',
+            'monthInput',
+            'totalJam',
+            'perNilai',
+            'perTema',
+            'firstAcc',
+            'lastAcc'
+        ));
     }
 
     public function detailPerSaranData(Request $request)
@@ -2101,6 +2224,8 @@ class LeaderSuggestionController extends Controller
             'suggestions.Content_Suggestion',
             'suggestions.Score_A_Suggestion',
             'suggestions.Score_B_Suggestion',
+            'suggestions.Acceptance_First_Suggestion',
+            'suggestions.Hour_Suggestion',
             DB::raw("COALESCE(suggestions.Score_A_Suggestion, 0) + COALESCE(
             JSON_UNQUOTE(JSON_EXTRACT(suggestions.Score_B_Suggestion, '$.kreatifitas')), 0
         ) + COALESCE(
@@ -2108,12 +2233,11 @@ class LeaderSuggestionController extends Controller
         ) + COALESCE(
             JSON_UNQUOTE(JSON_EXTRACT(suggestions.Score_B_Suggestion, '$.usaha')), 0
         ) as total_score"),
-            $rifaDb.'.employees.nama as member_nama',
-            $rifaDb.'.employees.nik as member_nik',
+            $rifaDb . '.employees.nama as member_nama',
         ])
             ->leftJoin($rifaDb.'.employees', $rifaDb.'.employees.id', '=', 'suggestions.Id_Member')
             ->leftJoin('users', 'users.Id_User', '=', 'suggestions.Id_User')
-            ->whereNotNull('suggestions.Id_User'); // hanya saran yang sudah dinilai
+            ->whereNotNull('suggestions.Id_User');
 
         if ($monthInput) {
             [$year, $month] = explode('-', $monthInput);
@@ -2125,8 +2249,12 @@ class LeaderSuggestionController extends Controller
         return DataTables::of($query)
             ->addIndexColumn()
             ->editColumn('total_score', function ($row) {
-                // Konversi ke integer karena hasil DB raw bisa string
                 return (int) $row->total_score;
+            })
+            ->editColumn('Acceptance_First_Suggestion', function ($row) {
+                return $row->Acceptance_First_Suggestion !== null
+                    ? str_pad($row->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT)
+                    : '';
             })
             ->make(true);
     }
@@ -2143,8 +2271,8 @@ class LeaderSuggestionController extends Controller
             'suggestions.Content_Suggestion',
             'suggestions.Score_A_Suggestion',
             'suggestions.Score_B_Suggestion',
-            $rifaDb.'.employees.nama as member_nama',
-            $rifaDb.'.employees.nik as member_nik',
+            'suggestions.Acceptance_First_Suggestion',
+            $rifaDb . '.employees.nama as member_nama',
         ])
             ->leftJoin($rifaDb.'.employees', $rifaDb.'.employees.id', '=', 'suggestions.Id_Member')
             ->whereNotNull('suggestions.Id_User')
@@ -2158,7 +2286,7 @@ class LeaderSuggestionController extends Controller
         $sheet->setTitle('Detail Per Saran');
 
         // Header
-        $headers = ['No', 'Nama Member', 'Total Skor', 'NIK', 'Team', 'Permasalahan'];
+        $headers = ['No', 'Nama Member', 'No Penerimaan Awal', 'Total Skor', 'Team', 'Permasalahan'];
         $sheet->fromArray($headers, null, 'A1');
 
         // Styling header
@@ -2179,12 +2307,16 @@ class LeaderSuggestionController extends Controller
             }
             $total = $scoreA + $scoreB;
 
-            $sheet->setCellValue('A'.$row, $index + 1);
-            $sheet->setCellValue('B'.$row, $s->member_nama ?? '-');
-            $sheet->setCellValue('C'.$row, $total);
-            $sheet->setCellValue('D'.$row, $s->member_nik ?? '-');
-            $sheet->setCellValue('E'.$row, $s->Team_Suggestion ?? '-');
-            $sheet->setCellValue('F'.$row, $s->Content_Suggestion ?? '-');
+            $acc = $s->Acceptance_First_Suggestion !== null
+                ? str_pad($s->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT)
+                : '-';
+
+            $sheet->setCellValue('A' . $row, $index + 1);
+            $sheet->setCellValue('B' . $row, $s->member_nama ?? '-');
+            $sheet->setCellValue('C' . $row, $acc);
+            $sheet->setCellValue('D' . $row, $total);
+            $sheet->setCellValue('E' . $row, $s->Team_Suggestion ?? '-');
+            $sheet->setCellValue('F' . $row, $s->Content_Suggestion ?? '-');
 
             $row++;
         }
@@ -2378,5 +2510,65 @@ class LeaderSuggestionController extends Controller
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             ]
         );
+    }
+
+    public function rangkuman()
+    {
+        $page = 'rangkuman';
+        $Id_User = session('Id_User');
+        $user = User::find($Id_User);
+        $currentYear = Carbon::now()->format('Y');
+        $yearInput = request('Year', $currentYear);
+
+        $saranPerMonth = Suggestion::selectRaw('MONTH(Date_First_Suggestion) as bulan, COUNT(*) as total')
+            ->whereYear('Date_First_Suggestion', $yearInput)
+            ->groupBy('bulan')
+            ->pluck('total', 'bulan')
+            ->toArray();
+
+        $selesaiPerMonth = Suggestion::selectRaw('MONTH(Date_First_Suggestion) as bulan, COUNT(*) as total')
+            ->whereYear('Date_First_Suggestion', $yearInput)
+            ->whereNotNull('Id_User')
+            ->groupBy('bulan')
+            ->pluck('total', 'bulan')
+            ->toArray();
+
+        $suggestions = Suggestion::select('Score_A_Suggestion', 'Score_B_Suggestion', DB::raw('MONTH(Date_First_Suggestion) as bulan'))
+            ->whereYear('Date_First_Suggestion', $yearInput)
+            ->whereNotNull('Id_User')
+            ->get();
+
+        $nilaiLebih5PerMonth = array_fill(1, 12, 0);
+        foreach ($suggestions as $s) {
+            $scoreA = $s->Score_A_Suggestion ?? 0;
+            $scoreB = 0;
+            if ($s->Score_B_Suggestion) {
+                $scores = json_decode($s->Score_B_Suggestion, true);
+                if (is_array($scores)) {
+                    $scoreB = ($scores['kreatifitas'] ?? 0) + ($scores['ide'] ?? 0) + ($scores['usaha'] ?? 0);
+                }
+            }
+            if (($scoreA + $scoreB) >= 5) {
+                $nilaiLebih5PerMonth[$s->bulan]++;
+            }
+        }
+
+        $totalJamPerMonth = Suggestion::selectRaw('MONTH(Date_First_Suggestion) as bulan, SUM(Hour_Suggestion) as total_jam')
+            ->whereYear('Date_First_Suggestion', $yearInput)
+            ->groupBy('bulan')
+            ->pluck('total_jam', 'bulan')
+            ->toArray();
+
+        $data = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $data[$m] = [
+                'saran'       => $saranPerMonth[$m] ?? 0,
+                'selesai'     => $selesaiPerMonth[$m] ?? 0,
+                'nilai_lebih5' => $nilaiLebih5PerMonth[$m],
+                'total_jam'   => $totalJamPerMonth[$m] ?? 0,
+            ];
+        }
+
+        return view('leaders.suggestions.rangkuman', compact('page', 'user', 'yearInput', 'data'));
     }
 }

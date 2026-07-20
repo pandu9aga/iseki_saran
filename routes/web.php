@@ -33,6 +33,7 @@ Route::middleware(LeaderMiddleware::class)->group(function () {
     Route::get('/leader/suggestion/not-submit/filter', [LeaderSuggestionController::class, 'notSubmitFilter'])->name('leader.suggestion.notSubmit.filter');
     Route::get('/leader/suggestion/not-sign', [LeaderSuggestionController::class, 'notSign'])->name('leader.suggestion.notSign');
     Route::get('/leader/suggestion/not-sign/filter', [LeaderSuggestionController::class, 'notSignFilter'])->name('leader.suggestion.notSign.filter');
+    Route::get('/leader/suggestion/rangkuman', [LeaderSuggestionController::class, 'rangkuman'])->name('leader.suggestion.rangkuman');
     Route::get('/leader/suggestion/detail-per-saran', [LeaderSuggestionController::class, 'detailPerSaran'])->name('leader.suggestion.detailPerSaran');
     Route::get('/leader/suggestion/detail-per-saran/data', [LeaderSuggestionController::class, 'detailPerSaranData'])->name('leader.suggestion.detailPerSaran.data');
     Route::get('/leader/suggestion/detail-per-saran/export', [LeaderSuggestionController::class, 'exportDetailPerSaran'])->name('leader.suggestion.detailPerSaran.export');
