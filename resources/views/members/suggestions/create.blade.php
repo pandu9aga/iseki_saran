@@ -43,6 +43,13 @@
                     </div>
 
                     <div class="row mb-2">
+                        <div class="col">
+                            <label for="Hour_Suggestion" class="form-label">Jam Perbaikan (jam)</label>
+                            <input type="number" id="Hour_Suggestion" name="Hour_Suggestion" class="form-control" step="any" min="0" placeholder="Contoh: 11 atau 13.5">
+                        </div>
+                    </div>
+
+                    <div class="row mb-2">
                         <label class="form-label">Foto Permasalahan</label>
                         @for($i = 0; $i < 2; $i++)
                         <div class="col-6 d-flex justify-content-center align-items-center">

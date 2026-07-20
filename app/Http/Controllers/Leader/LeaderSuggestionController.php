@@ -20,6 +20,7 @@ use App\Models\Member;
 use App\Models\Suggestion;
 use Yajra\DataTables\Facades\DataTables;
 use setasign\Fpdi\Fpdi;
+use App\Services\SuggestionPdfService;
 
 class LeaderSuggestionController extends Controller
 {
@@ -70,6 +71,7 @@ class LeaderSuggestionController extends Controller
             'suggestions.Id_User',
             'suggestions.Acceptance_First_Suggestion',
             'suggestions.Acceptance_Last_Suggestion',
+            'suggestions.Hour_Suggestion',
             $rifaDb . '.employees.nama as member_nama',
             'users.Name_User as user_name',
         ])
@@ -194,6 +196,7 @@ class LeaderSuggestionController extends Controller
             'suggestions.Id_User',
             'suggestions.Acceptance_First_Suggestion',
             'suggestions.Acceptance_Last_Suggestion',
+            'suggestions.Hour_Suggestion',
             $rifaDb . '.employees.nama as member_nama',
             'users.Name_User as user_name',
         ])
@@ -314,6 +317,7 @@ class LeaderSuggestionController extends Controller
             'Content_Suggestion' => $request->Content_Suggestion,
             'Date_First_Suggestion' => Carbon::today(),
             'Status_Suggestion' => 0,
+            'Hour_Suggestion' => $request->Hour_Suggestion,
             // 'Acceptance_First_Suggestion' => $newNumber,
         ]);
 
@@ -420,7 +424,8 @@ class LeaderSuggestionController extends Controller
             'Comment_Suggestion',
             'Id_User',
             'Acceptance_First_Suggestion',
-            'Acceptance_Last_Suggestion'
+            'Acceptance_Last_Suggestion',
+            'Hour_Suggestion'
         ];
 
         if (!in_array($field, $allowed)) {
@@ -1042,6 +1047,7 @@ class LeaderSuggestionController extends Controller
             'suggestions.Id_User',
             'suggestions.Acceptance_First_Suggestion',
             'suggestions.Acceptance_Last_Suggestion',
+            'suggestions.Hour_Suggestion',
             $rifaDb . '.employees.nama as member_nama',
             $rifaDb . '.employees.nik as member_nik',
             'users.Name_User as user_name',
@@ -1145,454 +1151,66 @@ class LeaderSuggestionController extends Controller
             ->make(true);
     }
 
+    /**
+     * Generate PDF secara sinkron (untuk finalize manual).
+     */
+    public function generatePdfInternal($id)
+    {
+        ignore_user_abort(true);
+        set_time_limit(0);
+
+        // Tutup koneksi sehingga respons terkirim ke klien segera (di php-fpm)
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        try {
+            $pdfService = app(\App\Services\SuggestionPdfService::class);
+            $pdfService->generate((int) $id);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("PDF Gen Internal Error: " . $e->getMessage());
+        }
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    /**
+     * @deprecated Sudah digantikan dengan service class.
+     */
     public function convertPdf($id): void
     {
-        $suggestion = Suggestion::with(['user', 'member'])->find($id);
-        if (!$suggestion) {
-            return;
-        }
-
-        // ===============================
-        // LOAD TEMPLATE EXCEL
-        // ===============================
-        $spreadsheet = IOFactory::load(
-            storage_path('app/templates/saran_perbaikan.xlsx')
-        );
-
-        // bersihkan defined name (penting agar PDF stabil)
-        foreach ($spreadsheet->getDefinedNames() as $definedName) {
-            $spreadsheet->removeDefinedName($definedName->getName());
-        }
-
-        $sheet = $spreadsheet->getActiveSheet();
-
-        // ===============================
-        // MAPPING CELL (SAMA PERSIS)
-        // ===============================
-        $sheet->setCellValue('K4', $suggestion->Date_First_Suggestion ?? '');
-        $sheet->setCellValue('AD4', $suggestion->Date_Last_Suggestion ?? '');
-        $sheet->setCellValue('C5', $suggestion->member->nik ?? '');
-        $sheet->setCellValue('Q5', $suggestion->Team_Suggestion ?? '');
-        $sheet->setCellValue('Y5', $suggestion->member->nama ?? '');
-        $sheet->setCellValue('Q11', $suggestion->Theme_Suggestion ?? '');
-        $sheet->setCellValue('B16', $suggestion->Content_Suggestion ?? '');
-        $sheet->setCellValue('AG16', $suggestion->Improvement_Suggestion ?? '');
-        $sheet->setCellValue('AF38', $suggestion->Comment_Suggestion ?? '');
-        $sheet->setCellValue('BC39', $suggestion->user->Name_User ?? '');
-
-        // ======================================================
-        // === Lingkaran outline pink berdasarkan Theme_Suggestion ===
-        $positions = [
-            'keselamatan' => 'C8',
-            'kualitas'    => 'E8',
-            'cost'        => 'G8',
-            'waktu'       => 'I8',
-            'lingkungan'  => 'K8',
-            'moral'       => 'M8',
-            'fasilitas'       => 'W15',
-            'mould jig'       => 'AA15',
-            'set up'       => 'AG15',
-            'material'       => 'AK15',
-            'metode'       => 'AO15',
-            'informasi'       => 'AS15',
-        ];
-
-        $theme = strtolower(trim($suggestion->Theme_Suggestion ?? ''));
-        $targetCell = null;
-        foreach ($positions as $keyword => $cell) {
-            if (stripos($theme, $keyword) !== false) {
-                $targetCell = $cell;
-                break;
-            }
-        }
-
-        $tmpFiles = []; // simpan semua temp file supaya bisa dihapus nanti
-
-        if ($targetCell && function_exists('imagecreatetruecolor')) {
-            $size = 80;
-            $thickness = 10;
-            $img = imagecreatetruecolor($size, $size);
-            imagesavealpha($img, true);
-            $transparent = imagecolorallocatealpha($img, 0, 0, 0, 127);
-            imagefill($img, 0, 0, $transparent);
-
-            $pink = imagecolorallocate($img, 255, 0, 151);
-            imagesetthickness($img, $thickness);
-            $margin = $thickness + 6;
-            imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $pink);
-
-            $tmpFile = sys_get_temp_dir() . '/circle_theme_' . $suggestion->Id_Suggestion . '.png';
-            imagepng($img, $tmpFile);
-            imagedestroy($img);
-            $tmpFiles[] = $tmpFile;
-
-            $drawing = new Drawing();
-            $drawing->setName('ThemeCircle');
-            $drawing->setPath($tmpFile);
-            $drawing->setCoordinates($targetCell);
-            $specialCells = ['C8', 'E8', 'G8', 'I8', 'K8', 'M8'];
-            if (in_array($targetCell, $specialCells)) {
-                $drawing->setOffsetX(12);
-                $drawing->setOffsetY(-3);
-            } else {
-                $drawing->setOffsetX(-3);
-                $drawing->setOffsetY(0);
-            }
-            $drawing->setWidth(36);
-            $drawing->setHeight(36);
-            $drawing->setWorksheet($sheet);
-        }
-
-        // === Lingkaran oranye di Status (AL5 untuk 0, AN5 untuk 1) ===
-        $statusCell = null;
-        if ($suggestion->Status_Suggestion == 0) {
-            $statusCell = 'AL5';
-        } elseif ($suggestion->Status_Suggestion == 1) {
-            $statusCell = 'AN5';
-        }
-
-        if ($statusCell && function_exists('imagecreatetruecolor')) {
-            $size = 80;
-            $thickness = 10;
-            $img = imagecreatetruecolor($size, $size);
-            imagesavealpha($img, true);
-            $transparent = imagecolorallocatealpha($img, 0, 0, 0, 127);
-            imagefill($img, 0, 0, $transparent);
-
-            $orange = imagecolorallocate($img, 212, 109, 0); // oranye
-            imagesetthickness($img, $thickness);
-            $margin = $thickness + 6;
-            imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $orange);
-
-            $tmpFile = sys_get_temp_dir() . '/circle_status_' . $suggestion->Id_Suggestion . '.png';
-            imagepng($img, $tmpFile);
-            imagedestroy($img);
-            $tmpFiles[] = $tmpFile;
-
-            $drawing = new Drawing();
-            $drawing->setName('StatusCircle');
-            $drawing->setPath($tmpFile);
-            $drawing->setCoordinates($statusCell);
-            $drawing->setOffsetX(-2);
-            $drawing->setOffsetY(5);
-            $drawing->setWidth(64);
-            $drawing->setHeight(64);
-            $drawing->setWorksheet($sheet);
-        }
-
-        // === Lingkaran outline hitam berdasarkan Score_A_Suggestion ===
-        $scoreMap = [
-            0  => 'E37',
-            1  => 'F37',
-            2  => 'G37',
-            3  => 'H37',
-            4  => 'I37',
-            5  => 'J37',
-            6  => 'K37',
-            7  => 'L37',
-            8  => 'M37',
-            9  => 'O37',
-            10 => 'Q37',
-            11 => 'S37',
-            12 => 'U37',
-            13 => 'W37',
-            14 => 'Y37',
-            15 => 'AA37',
-        ];
-
-        if (!is_null($suggestion->Score_A_Suggestion) && isset($scoreMap[$suggestion->Score_A_Suggestion])) {
-            $scoreCell = $scoreMap[$suggestion->Score_A_Suggestion];
-
-            if (function_exists('imagecreatetruecolor')) {
-                $size = 80;
-                $thickness = 10;
-                $img = imagecreatetruecolor($size, $size);
-                imagesavealpha($img, true);
-                $transparent = imagecolorallocatealpha($img, 0, 0, 0, 127);
-                imagefill($img, 0, 0, $transparent);
-
-                $black = imagecolorallocate($img, 0, 0, 0);
-                imagesetthickness($img, $thickness);
-                $margin = $thickness + 6;
-                imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $black);
-
-                $tmpFile = sys_get_temp_dir() . '/circle_score_' . $suggestion->Id_Suggestion . '.png';
-                imagepng($img, $tmpFile);
-                imagedestroy($img);
-                $tmpFiles[] = $tmpFile;
-
-                $drawing = new Drawing();
-                $drawing->setName('ScoreCircle');
-                $drawing->setPath($tmpFile);
-                $drawing->setCoordinates($scoreCell);
-                // offset beda untuk 0–7 dan 8–15
-                if ($suggestion->Score_A_Suggestion <= 7) {
-                    $drawing->setOffsetX(0);
-                } else {
-                    $drawing->setOffsetX(15);
-                }
-                $drawing->setOffsetY(-2);
-                $drawing->setWidth(32);
-                $drawing->setHeight(32);
-                $drawing->setWorksheet($sheet);
-            }
-        }
-
-        // === Lingkaran outline hitam berdasarkan Score_B_Suggestion (JSON) ===
-        if (!empty($suggestion->Score_B_Suggestion)) {
-            $scoreB = json_decode($suggestion->Score_B_Suggestion, true);
-
-            if (is_array($scoreB)) {
-                $mappingB = [
-                    'kreatifitas' => [
-                        0 => 'Y42',
-                        1 => 'Z42',
-                        2 => 'AA42',
-                        3 => 'AB42',
-                        4 => 'AC42',
-                        5 => 'AD42',
-                    ],
-                    'ide' => [
-                        0 => 'Y43',
-                        1 => 'Z43',
-                        2 => 'AA43',
-                        3 => 'AB43',
-                        4 => 'AC43',
-                        5 => 'AD43',
-                    ],
-                    'usaha' => [
-                        0 => 'Y44',
-                        1 => 'Z44',
-                        2 => 'AA44',
-                        3 => 'AB44',
-                        4 => 'AC44',
-                        5 => 'AD44',
-                    ],
-                ];
-
-                $total = 0;
-                foreach ($mappingB as $key => $map) {
-                    if (isset($scoreB[$key])) {
-                        $val = (int) $scoreB[$key];
-                        $total += $val;
-
-                        if (isset($map[$val]) && function_exists('imagecreatetruecolor')) {
-                            $cell = $map[$val];
-                            $size = 80;
-                            $thickness = 10;
-                            $img = imagecreatetruecolor($size, $size);
-                            imagesavealpha($img, true);
-                            $transparent = imagecolorallocatealpha($img, 0, 0, 0, 127);
-                            imagefill($img, 0, 0, $transparent);
-
-                            $black = imagecolorallocate($img, 0, 0, 0);
-                            imagesetthickness($img, $thickness);
-                            $margin = $thickness + 6;
-                            imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $black);
-
-                            $tmpFile = sys_get_temp_dir() . '/circle_scoreB_' . $key . '_' . $suggestion->Id_Suggestion . '.png';
-                            imagepng($img, $tmpFile);
-                            imagedestroy($img);
-                            $tmpFiles[] = $tmpFile;
-
-                            $drawing = new Drawing();
-                            $drawing->setName('ScoreB_' . $key);
-                            $drawing->setPath($tmpFile);
-                            $drawing->setCoordinates($cell);
-                            $drawing->setOffsetX(0);
-                            $drawing->setOffsetY(-2);
-                            $drawing->setWidth(32);
-                            $drawing->setHeight(32);
-                            $drawing->setWorksheet($sheet);
-                        }
-                    }
-                }
-
-                // Tulis total ke AA45
-                $sheet->setCellValue('AA45', $suggestion->total_score);
-            }
-        }
-
-        // === Insert gambar Content & Improvement ===
-        if (!empty($suggestion->Content_Photos_Suggestion)) {
-            $contentPhotos = json_decode($suggestion->Content_Photos_Suggestion, true);
-
-            if (is_array($contentPhotos)) {
-                foreach ($contentPhotos as $i => $photoName) {
-                    $filePath = public_path('uploads/contents/' . $photoName);
-                    if (!empty($photoName) && file_exists($filePath)) {
-                        $cell = $i == 0 ? 'B19' : ($i == 1 ? 'B24' : null);
-                        if ($cell) {
-                            $drawing = new Drawing();
-                            $drawing->setName('ContentPhoto' . ($i + 1));
-                            $drawing->setPath($filePath);
-                            $drawing->setCoordinates($cell);
-                            $drawing->setOffsetX(200);
-                            $drawing->setOffsetY(20);
-                            $drawing->setWidthAndHeight(660, 420); // otomatis scale
-                            $drawing->setWorksheet($sheet);
-                        }
-                    }
-                }
-            }
-        }
-
-        if (!empty($suggestion->Improvement_Photos_Suggestion)) {
-            $improvePhotos = json_decode($suggestion->Improvement_Photos_Suggestion, true);
-
-            if (is_array($improvePhotos)) {
-                foreach ($improvePhotos as $i => $photoName) {
-                    $filePath = public_path('uploads/improvements/' . $photoName);
-                    if (!empty($photoName) && file_exists($filePath)) {
-                        $cell = $i == 0 ? 'AG19' : ($i == 1 ? 'AG24' : null);
-                        if ($cell) {
-                            $drawing = new Drawing();
-                            $drawing->setName('ImprovementPhoto' . ($i + 1));
-                            $drawing->setPath($filePath);
-                            $drawing->setCoordinates($cell);
-                            $drawing->setOffsetX(200);
-                            $drawing->setOffsetY(20);
-                            $drawing->setWidthAndHeight(660, 420); // otomatis scale
-                            $drawing->setWorksheet($sheet);
-                        }
-                    }
-                }
-            }
-        }
-
-        // === Mapping Acceptance_First_Suggestion ===
-        if (!empty($suggestion->Acceptance_First_Suggestion)) {
-            // Prefix berdasarkan divisi: Assembling=620, Painting=621, DST=623
-            $teamPrefix = match (strtolower(trim($suggestion->Team_Suggestion ?? ''))) {
-                'assembling' => 0,
-                'painting'   => 1,
-                'dst'        => 3,
-                default      => 0,
-            };
-
-            // isi AR3, AT3, AV3 (prefix nomor)
-            $sheet->setCellValue('AR3', 6);
-            $sheet->setCellValue('AT3', 2);
-            $sheet->setCellValue('AV3', $teamPrefix);
-
-            // format jadi 5 digit (misal: 00001, 00025, dst)
-            $accFirst = str_pad($suggestion->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT);
-
-            // isi digit ke cell
-            $sheet->setCellValue('AX3', substr($accFirst, 0, 1));
-            $sheet->setCellValue('AZ3', substr($accFirst, 1, 1));
-            $sheet->setCellValue('BB3', substr($accFirst, 2, 1));
-            $sheet->setCellValue('BD3', substr($accFirst, 3, 1));
-            $sheet->setCellValue('BF3', substr($accFirst, 4, 1));
-        }
-
-        // ===============================
-        // PAGE SETUP PDF
-        // ===============================
-        $sheet->getPageSetup()
-            ->setPaperSize(PageSetup::PAPERSIZE_A4)
-            // ->setOrientation(PageSetup::ORIENTATION_POTRAIT)
-            ->setFitToWidth(1)
-            ->setFitToHeight(1);
-
-        $sheet->getPageMargins()
-            ->setTop(0.2)
-            ->setBottom(0.2)
-            ->setLeft(0.2)
-            ->setRight(0.2);
-
-        // ===============================
-        // PATH OUTPUT PDF
-        // ===============================
-        $bulan = date('Y-m', strtotime($suggestion->Date_First_Suggestion));
-        $dir   = public_path("uploads/pdf/{$bulan}");
-
-        if (!is_dir($dir)) {
-            mkdir($dir, 0777, true);
-        }
-
-        $acc  = str_pad($suggestion->Acceptance_First_Suggestion ?? 0, 5, '0', STR_PAD_LEFT);
-        $path = "{$dir}/Saran_Perbaikan_{$bulan}_{$acc}.pdf";
-
-        // === Simpan ke XLSX ===
-        $tempXlsx = storage_path('app/tmp_saran_' . $suggestion->Id_Suggestion . '_' . time() . '.xlsx');
-        IOFactory::createWriter($spreadsheet, 'Xlsx')->save($tempXlsx);
-        $spreadsheet->disconnectWorksheets();
-        unset($spreadsheet);
-
-        // === Convert via LibreOffice dengan Isolated User Profile ===
-        $librePath = 'C:\xampp\htdocs\iseki_saran\storage\app\LibreOfficePortable\App\libreoffice\program\soffice.exe';
-        $tempProfileDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'soffice_profile_' . uniqid();
-        $profileUrl = 'file:///' . str_replace('\\', '/', $tempProfileDir);
-
-        $cmd = sprintf(
-            '"%s" --headless "-env:UserInstallation=%s" --convert-to pdf "%s" --outdir "%s"',
-            $librePath,
-            $profileUrl,
-            $tempXlsx,
-            dirname($tempXlsx)
-        );
-
-        exec($cmd, $output, $resultCode);
-
-        // Helper untuk menghapus folder profil secara rekursif
-        $deleteDir = function($dirPath) use (&$deleteDir) {
-            if (!is_dir($dirPath)) return;
-            $files = array_diff(scandir($dirPath), ['.', '..']);
-            foreach ($files as $file) {
-                (is_dir("$dirPath/$file")) ? $deleteDir("$dirPath/$file") : @unlink("$dirPath/$file");
-            }
-            @rmdir($dirPath);
-        };
-
-        // Hapus folder profil sementara setelah perintah selesai dijalankan
-        $deleteDir($tempProfileDir);
-
-        if ($resultCode !== 0) {
-            @unlink($tempXlsx);
-            throw new \Exception('LibreOffice gagal convert: ' . implode("\n", $output));
-        }
-
-        $tempPdf = preg_replace('/\.xlsx$/i', '.pdf', $tempXlsx);
-
-        if (!file_exists($tempPdf)) {
-            @unlink($tempXlsx);
-            throw new \Exception('PDF tidak ditemukan setelah konversi.');
-        }
-
-        // === Move ke path final ===
-        if (file_exists($path)) {
-            unlink($path);
-        }
-
-        rename($tempPdf, $path);
-
-        // === Cleanup ===
-        @unlink($tempXlsx);
+        $pdfService = app(SuggestionPdfService::class);
+        $pdfService->generate((int) $id);
     }
 
     public function finalizeSuggestion($id)
     {
         $suggestion = Suggestion::findOrFail($id);
 
-        // validasi minimal data penting
-        if (
-            !$suggestion->Acceptance_First_Suggestion ||
-            !$suggestion->Date_First_Suggestion
-        ) {
+        // Validasi minimal data penting
+        if (!$suggestion->Acceptance_First_Suggestion || !$suggestion->Date_First_Suggestion) {
             return response()->json([
                 'success' => false,
                 'message' => 'Data belum lengkap untuk generate PDF'
             ]);
         }
 
-        // PANGGIL PDF DI SINI (1x SAJA)
-        $this->convertPdf($id);
+        // Generate PDF sinkron (ada loading indicator di UI)
+        try {
+            $pdfService = app(SuggestionPdfService::class);
+            $pdfService->generate((int) $id);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'PDF berhasil dibuat'
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'PDF berhasil dibuat'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('finalizeSuggestion gagal: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal generate PDF: ' . $e->getMessage()
+            ]);
+        }
     }
 
     public function saveAll(Request $request, $id)
@@ -1635,7 +1253,7 @@ class LeaderSuggestionController extends Controller
             $suggestion->Id_User = $request->input('Id_User');
         }
 
-        // 6. Update Acceptance_First_Suggestion
+        // 6. Assign Acceptance_First_Suggestion (jika belum ada)
         if ($request->has('Acceptance_First_Suggestion')) {
             if (!$suggestion->Acceptance_First_Suggestion) {
                 $next = (Suggestion::max('Acceptance_First_Suggestion') ?? 0) + 1;
@@ -1643,10 +1261,27 @@ class LeaderSuggestionController extends Controller
             }
         }
 
+        // 7. Update Hour_Suggestion
+        if ($request->has('Hour_Suggestion')) {
+            $val = $request->input('Hour_Suggestion');
+            $suggestion->Hour_Suggestion = ($val === null || $val === '' || $val === 'null') ? null : $val;
+        }
+
+        // Simpan ke database — ini yang harus cepat
         $suggestion->save();
 
-        // PDF TIDAK dibuat saat simpan — hanya data yang disimpan agar cepat.
-        // PDF di-generate terpisah via Export PDF jika diperlukan.
+        // ─── Dispatch PDF generation ke background (non-blocking) ───
+        // PDF akan dibuat di background oleh artisan command.
+        // Response dikembalikan SEBELUM LibreOffice selesai, sehingga save tidak lemot.
+        if ($suggestion->Acceptance_First_Suggestion && $suggestion->Date_First_Suggestion) {
+            try {
+                $pdfService = app(SuggestionPdfService::class);
+                $pdfService->dispatchBackground((int) $id);
+            } catch (\Exception $e) {
+                // Jika dispatch background gagal, log saja — tidak memblokir response
+                \Log::warning('Gagal dispatch background PDF (ID ' . $id . '): ' . $e->getMessage());
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -1661,7 +1296,7 @@ class LeaderSuggestionController extends Controller
         $dir = public_path("uploads/pdf/{$bulan}");
 
         if (!is_dir($dir)) {
-            return back()->with('error','Folder PDF tidak ditemukan');
+            return back()->with('error', 'Folder PDF tidak ditemukan');
         }
 
         // === SORT BERDASARKAN DIVISI (Team_Suggestion), lalu Acceptance ===
@@ -1689,7 +1324,7 @@ class LeaderSuggestionController extends Controller
         }
 
         if (empty($files)) {
-            return back()->with('error','Tidak ada PDF untuk divisi yang dipilih');
+            return back()->with('error', 'Tidak ada PDF untuk divisi yang dipilih');
         }
 
         $pdf = new Fpdi();
@@ -2072,8 +1707,75 @@ class LeaderSuggestionController extends Controller
         $Id_User = session('Id_User');
         $user = User::find($Id_User);
         $currentDate = Carbon::now();
-        $monthInput = $currentDate->format('Y-m');
-        return view('leaders.suggestions.detail_per_saran', compact('page', 'user', 'monthInput'));
+        $monthInput = request('Month', $currentDate->format('Y-m'));
+
+        [$year, $month] = explode('-', $monthInput);
+        $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth();
+
+        // Total jam perbaikan
+        $totalJam = Suggestion::whereNotNull('Id_User')
+            ->whereBetween('Date_First_Suggestion', [$startDate, $endDate])
+            ->sum('Hour_Suggestion');
+
+        // Saran per nilai (total_score dikelompokkan)
+        $saran = Suggestion::select([
+            'suggestions.Score_A_Suggestion',
+            'suggestions.Score_B_Suggestion',
+        ])
+            ->whereNotNull('suggestions.Id_User')
+            ->whereBetween('suggestions.Date_First_Suggestion', [$startDate, $endDate])
+            ->get();
+
+        $perNilai = [0 => 0, 1 => 0, 2 => 0, 3 => 0, 4 => 0, 'lebih5' => 0];
+        foreach ($saran as $s) {
+            $scoreA = $s->Score_A_Suggestion ?? 0;
+            $scoreB = 0;
+            if ($s->Score_B_Suggestion) {
+                $scores = json_decode($s->Score_B_Suggestion, true);
+                if (is_array($scores)) {
+                    $scoreB = ($scores['kreatifitas'] ?? 0) + ($scores['ide'] ?? 0) + ($scores['usaha'] ?? 0);
+                }
+            }
+            $total = $scoreA + $scoreB;
+            if ($total >= 5) {
+                $perNilai['lebih5']++;
+            } elseif (isset($perNilai[$total])) {
+                $perNilai[$total]++;
+            }
+        }
+
+        // Saran per tema
+        $perTema = Suggestion::select('Theme_Suggestion', DB::raw('COUNT(*) as total'))
+            ->whereNotNull('Id_User')
+            ->whereBetween('Date_First_Suggestion', [$startDate, $endDate])
+            ->groupBy('Theme_Suggestion')
+            ->pluck('total', 'Theme_Suggestion')
+            ->toArray();
+
+        // No penerimaan pertama dan terakhir
+        $firstAcc = Suggestion::whereNotNull('Acceptance_First_Suggestion')
+            ->whereNotNull('Id_User')
+            ->whereBetween('Date_First_Suggestion', [$startDate, $endDate])
+            ->orderBy('Acceptance_First_Suggestion', 'asc')
+            ->value('Acceptance_First_Suggestion');
+
+        $lastAcc = Suggestion::whereNotNull('Acceptance_First_Suggestion')
+            ->whereNotNull('Id_User')
+            ->whereBetween('Date_First_Suggestion', [$startDate, $endDate])
+            ->orderBy('Acceptance_First_Suggestion', 'desc')
+            ->value('Acceptance_First_Suggestion');
+
+        return view('leaders.suggestions.detail_per_saran', compact(
+            'page',
+            'user',
+            'monthInput',
+            'totalJam',
+            'perNilai',
+            'perTema',
+            'firstAcc',
+            'lastAcc'
+        ));
     }
 
     public function detailPerSaranData(Request $request)
@@ -2089,6 +1791,8 @@ class LeaderSuggestionController extends Controller
             'suggestions.Content_Suggestion',
             'suggestions.Score_A_Suggestion',
             'suggestions.Score_B_Suggestion',
+            'suggestions.Acceptance_First_Suggestion',
+            'suggestions.Hour_Suggestion',
             DB::raw("COALESCE(suggestions.Score_A_Suggestion, 0) + COALESCE(
             JSON_UNQUOTE(JSON_EXTRACT(suggestions.Score_B_Suggestion, '$.kreatifitas')), 0
         ) + COALESCE(
@@ -2097,11 +1801,10 @@ class LeaderSuggestionController extends Controller
             JSON_UNQUOTE(JSON_EXTRACT(suggestions.Score_B_Suggestion, '$.usaha')), 0
         ) as total_score"),
             $rifaDb . '.employees.nama as member_nama',
-            $rifaDb . '.employees.nik as member_nik',
         ])
             ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
             ->leftJoin('users', 'users.Id_User', '=', 'suggestions.Id_User')
-            ->whereNotNull('suggestions.Id_User'); // hanya saran yang sudah dinilai
+            ->whereNotNull('suggestions.Id_User');
 
         if ($monthInput) {
             [$year, $month] = explode('-', $monthInput);
@@ -2113,8 +1816,12 @@ class LeaderSuggestionController extends Controller
         return DataTables::of($query)
             ->addIndexColumn()
             ->editColumn('total_score', function ($row) {
-                // Konversi ke integer karena hasil DB raw bisa string
                 return (int) $row->total_score;
+            })
+            ->editColumn('Acceptance_First_Suggestion', function ($row) {
+                return $row->Acceptance_First_Suggestion !== null
+                    ? str_pad($row->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT)
+                    : '';
             })
             ->make(true);
     }
@@ -2130,8 +1837,8 @@ class LeaderSuggestionController extends Controller
             'suggestions.Content_Suggestion',
             'suggestions.Score_A_Suggestion',
             'suggestions.Score_B_Suggestion',
+            'suggestions.Acceptance_First_Suggestion',
             $rifaDb . '.employees.nama as member_nama',
-            $rifaDb . '.employees.nik as member_nik',
         ])
             ->leftJoin($rifaDb . '.employees', $rifaDb . '.employees.id', '=', 'suggestions.Id_Member')
             ->whereNotNull('suggestions.Id_User')
@@ -2145,7 +1852,7 @@ class LeaderSuggestionController extends Controller
         $sheet->setTitle('Detail Per Saran');
 
         // Header
-        $headers = ['No', 'Nama Member', 'Total Skor', 'NIK', 'Team', 'Permasalahan'];
+        $headers = ['No', 'Nama Member', 'No Penerimaan Awal', 'Total Skor', 'Team', 'Permasalahan'];
         $sheet->fromArray($headers, null, 'A1');
 
         // Styling header
@@ -2166,10 +1873,14 @@ class LeaderSuggestionController extends Controller
             }
             $total = $scoreA + $scoreB;
 
+            $acc = $s->Acceptance_First_Suggestion !== null
+                ? str_pad($s->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT)
+                : '-';
+
             $sheet->setCellValue('A' . $row, $index + 1);
             $sheet->setCellValue('B' . $row, $s->member_nama ?? '-');
-            $sheet->setCellValue('C' . $row, $total);
-            $sheet->setCellValue('D' . $row, $s->member_nik ?? '-');
+            $sheet->setCellValue('C' . $row, $acc);
+            $sheet->setCellValue('D' . $row, $total);
             $sheet->setCellValue('E' . $row, $s->Team_Suggestion ?? '-');
             $sheet->setCellValue('F' . $row, $s->Content_Suggestion ?? '-');
 
@@ -2192,5 +1903,65 @@ class LeaderSuggestionController extends Controller
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             ]
         );
+    }
+
+    public function rangkuman()
+    {
+        $page = 'rangkuman';
+        $Id_User = session('Id_User');
+        $user = User::find($Id_User);
+        $currentYear = Carbon::now()->format('Y');
+        $yearInput = request('Year', $currentYear);
+
+        $saranPerMonth = Suggestion::selectRaw('MONTH(Date_First_Suggestion) as bulan, COUNT(*) as total')
+            ->whereYear('Date_First_Suggestion', $yearInput)
+            ->groupBy('bulan')
+            ->pluck('total', 'bulan')
+            ->toArray();
+
+        $selesaiPerMonth = Suggestion::selectRaw('MONTH(Date_First_Suggestion) as bulan, COUNT(*) as total')
+            ->whereYear('Date_First_Suggestion', $yearInput)
+            ->whereNotNull('Id_User')
+            ->groupBy('bulan')
+            ->pluck('total', 'bulan')
+            ->toArray();
+
+        $suggestions = Suggestion::select('Score_A_Suggestion', 'Score_B_Suggestion', DB::raw('MONTH(Date_First_Suggestion) as bulan'))
+            ->whereYear('Date_First_Suggestion', $yearInput)
+            ->whereNotNull('Id_User')
+            ->get();
+
+        $nilaiLebih5PerMonth = array_fill(1, 12, 0);
+        foreach ($suggestions as $s) {
+            $scoreA = $s->Score_A_Suggestion ?? 0;
+            $scoreB = 0;
+            if ($s->Score_B_Suggestion) {
+                $scores = json_decode($s->Score_B_Suggestion, true);
+                if (is_array($scores)) {
+                    $scoreB = ($scores['kreatifitas'] ?? 0) + ($scores['ide'] ?? 0) + ($scores['usaha'] ?? 0);
+                }
+            }
+            if (($scoreA + $scoreB) >= 5) {
+                $nilaiLebih5PerMonth[$s->bulan]++;
+            }
+        }
+
+        $totalJamPerMonth = Suggestion::selectRaw('MONTH(Date_First_Suggestion) as bulan, SUM(Hour_Suggestion) as total_jam')
+            ->whereYear('Date_First_Suggestion', $yearInput)
+            ->groupBy('bulan')
+            ->pluck('total_jam', 'bulan')
+            ->toArray();
+
+        $data = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $data[$m] = [
+                'saran'       => $saranPerMonth[$m] ?? 0,
+                'selesai'     => $selesaiPerMonth[$m] ?? 0,
+                'nilai_lebih5' => $nilaiLebih5PerMonth[$m],
+                'total_jam'   => $totalJamPerMonth[$m] ?? 0,
+            ];
+        }
+
+        return view('leaders.suggestions.rangkuman', compact('page', 'user', 'yearInput', 'data'));
     }
 }

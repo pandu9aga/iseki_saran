@@ -30,7 +30,8 @@ class Suggestion extends Model
         'Comment_Suggestion',
         'Id_User',
         'Acceptance_First_Suggestion',
-        'Acceptance_Last_Suggestion'
+        'Acceptance_Last_Suggestion',
+        'Hour_Suggestion'
     ];
 
     public function member()

@@ -53,6 +53,7 @@
                                 <th class="text-primary text-center">Member</th>
                                 <th class="text-primary text-center">Permasalahan</th>
                                 <th class="text-primary text-center">Tanggal <br> Penyerahan <br> Awal</th>
+                                <th class="text-primary text-center">Total Jam</th>
                                 <th class="text-primary text-center">Team</th>
                                 <th class="text-primary text-center">Foto <br> Permasalahan</th>
                                 <th class="text-primary text-center">Perbaikan</th>
@@ -136,6 +137,14 @@
                     {
                         data: 'Date_First_Suggestion',
                         name: 'Date_First_Suggestion'
+                    },
+                    {
+                        data: 'Hour_Suggestion',
+                        name: 'Hour_Suggestion',
+                        render: function(data, type, row) {
+                            if (data === null || data === '') return '';
+                            return data + ' jam';
+                        }
                     },
                     {
                         data: 'Team_Suggestion',

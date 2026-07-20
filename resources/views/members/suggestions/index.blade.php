@@ -206,6 +206,21 @@
 							</td>
 						</tr>
 
+						{{-- Jam Perbaikan --}}
+						<tr>
+							<th class="col-2">Jam Perbaikan</th>
+							<td id="value-Hour_Suggestion">
+								{{ $suggestion->Hour_Suggestion ?? '-' }}
+								@if($suggestion->Hour_Suggestion)
+									jam
+								@endif
+								<button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+									data-bs-target="#modalHour">
+									<i class="material-icons-two-tone" style="font-size:16px;">edit</i>
+								</button>
+							</td>
+						</tr>
+
 						{{-- Leader --}}
 						<tr>
 							<th class="col-2">Leader</th>
@@ -321,6 +336,28 @@
                 <div class="modal-body">
                     <textarea class="form-control" name="value"
                         rows="4">{{ $suggestion->Improvement_Suggestion }}</textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Simpan</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Modal Jam Perbaikan --}}
+<div class="modal fade" id="modalHour" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="ajaxUpdateForm" data-field="Hour_Suggestion">
+            @csrf
+            <div class="modal-content">
+                <div class="modal-header bg-primary">
+                    <h5 class="modal-title text-white">Edit Jam Perbaikan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="number" class="form-control" name="value" step="any" min="0"
+                        value="{{ $suggestion->Hour_Suggestion }}" placeholder="Contoh: 11 atau 13.5">
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary">Simpan</button>

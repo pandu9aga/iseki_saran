@@ -67,6 +67,7 @@
                                 <th class="text-primary text-center">Foto <br> Permasalahan</th>
                                 <th class="text-primary text-center">Perbaikan</th>
                                 <th class="text-primary text-center">Foto <br> Perbaikan</th>
+                                <th class="text-primary text-center">Jam <br> Perbaikan</th>
                                 <th class="text-primary text-center">Skor A</th>
                                 <th class="text-primary text-center">Skor B</th>
                                 <th class="text-primary text-center">Komentar<span style="color: #FFFFFF;">__________________________________________________________</span></th>
@@ -74,6 +75,7 @@
                                 <th class="text-primary text-center">Status</th>
                                 <th class="text-primary text-center">Tema</th>
                                 <th class="text-primary text-center">No <br> Penerimaan <br> Awal</th>
+                                <th class="text-primary text-center">Total Jam</th>
                                 <th class="text-primary text-center">No <br> Penerimaan <br> Akhir</th>
                                 <th class="text-primary text-center">Tanggal <br> Penyerahan <br> Akhir</th>
                                 <th class="text-primary text-center">Action</th>
@@ -261,6 +263,14 @@
                         }
                     },
                     {
+                        data: 'Hour_Suggestion',
+                        name: 'Hour_Suggestion',
+                        render: function(data, type, row) {
+                            if (data === null || data === '') return '';
+                            return data + ' jam';
+                        }
+                    },
+                    {
                         data: 'Score_A_Suggestion',
                         name: 'Score_A_Suggestion'
                     },
@@ -291,6 +301,14 @@
                     {
                         data: 'Acceptance_First_Suggestion',
                         name: 'Acceptance_First_Suggestion'
+                    },
+                    {
+                        data: 'Hour_Suggestion',
+                        name: 'Hour_Suggestion',
+                        render: function(data, type, row) {
+                            if (data === null || data === '') return '';
+                            return data + ' jam';
+                        }
                     },
                     {
                         data: 'Acceptance_Last_Suggestion',

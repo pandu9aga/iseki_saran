@@ -71,6 +71,7 @@ class SuggestionController extends Controller
             'Content_Photos_Suggestion' => json_encode($savedPhotos),
             'Date_First_Suggestion' => Carbon::today(),
             'Status_Suggestion' => 0,
+            'Hour_Suggestion' => $request->Hour_Suggestion,
         ]);
 
         return redirect()
@@ -101,6 +102,7 @@ class SuggestionController extends Controller
                 'suggestions.Id_User',
                 'suggestions.Acceptance_First_Suggestion',
                 'suggestions.Acceptance_Last_Suggestion',
+                'suggestions.Hour_Suggestion',
                 $rifaDb.'.employees.nama as member_nama',
                 'users.Name_User as user_name',
             ])
@@ -220,6 +222,7 @@ class SuggestionController extends Controller
             'Content_Suggestion' => $request->Content_Suggestion,
             'Date_First_Suggestion' => Carbon::today(),
             'Status_Suggestion' => 0,
+            'Hour_Suggestion' => $request->Hour_Suggestion,
             // 'Acceptance_First_Suggestion' => $newNumber,
         ]);
 
@@ -307,7 +310,8 @@ class SuggestionController extends Controller
             'Content_Photos_Suggestion','Improvement_Suggestion',
             'Improvement_Photos_Suggestion','Score_A_Suggestion',
             'Score_B_Suggestion','Comment_Suggestion','Id_User',
-            'Acceptance_First_Suggestion','Acceptance_Last_Suggestion'
+            'Acceptance_First_Suggestion','Acceptance_Last_Suggestion',
+            'Hour_Suggestion'
         ])) {
             return response()->json(['success' => false, 'message' => 'Kolom tidak valid.']);
         }
