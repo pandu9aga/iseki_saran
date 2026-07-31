@@ -1271,22 +1271,26 @@ class LeaderSuggestionController extends Controller
         // Simpan ke database — ini yang harus cepat
         $suggestion->save();
 
-        // ─── Dispatch PDF generation ke background (non-blocking) ───
-        // PDF akan dibuat di background oleh artisan command.
-        // Response dikembalikan SEBELUM LibreOffice selesai, sehingga save tidak lemot.
-        if ($suggestion->Acceptance_First_Suggestion && $suggestion->Date_First_Suggestion) {
+        // ─── Generate PDF sinkron via Mpdf writer (pure PHP) ───
+        // PDF dirender langsung di proses PHP (tanpa LibreOffice / worker
+        // Task Scheduler), jadi setelah save selesai PDF sudah ada dan badge
+        // di modal Export PDF langsung hijau. Save tetap tidak gagal walau
+        // PDF bermasalah — cukup dicatat di log.
+        $pdfReady = false;
+        if ($request->input('generate_pdf') && $suggestion->Acceptance_First_Suggestion && $suggestion->Date_First_Suggestion) {
             try {
                 $pdfService = app(SuggestionPdfService::class);
-                $pdfService->dispatchBackground((int) $id);
+                $pdfPath    = $pdfService->generate((int) $id);
+                $pdfReady   = !empty($pdfPath) && file_exists($pdfPath);
             } catch (\Exception $e) {
-                // Jika dispatch background gagal, log saja — tidak memblokir response
-                \Log::warning('Gagal dispatch background PDF (ID ' . $id . '): ' . $e->getMessage());
+                \Log::error('saveAll gagal generate PDF (ID ' . $id . '): ' . $e->getMessage());
             }
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Data berhasil disimpan.'
+            'message' => 'Data berhasil disimpan.',
+            'pdf_ready' => $pdfReady,
         ]);
     }
 

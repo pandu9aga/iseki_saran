@@ -7,19 +7,22 @@ use App\Models\Suggestion;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
-use Carbon\Carbon;
+use PhpOffice\PhpSpreadsheet\Writer\Pdf\Mpdf;
 use Illuminate\Support\Facades\Log;
 
 class SuggestionPdfService
 {
     /**
      * Generate PDF untuk satu suggestion berdasarkan ID.
-     * Akan melempar Exception jika gagal.
+     * Render dilakukan 100% di dalam PHP via PhpSpreadsheet Mpdf writer
+     * (tanpa LibreOffice / aplikasi eksternal), sehingga bisa berjalan
+     * dari proses Apache/web request sekalipun.
      *
      * @param int $id
+     * @return string path lengkap PDF yang berhasil dibuat
      * @throws \Exception
      */
-    public function generate(int $id): void
+    public function generate(int $id): string
     {
         $suggestion = Suggestion::with(['user', 'member'])->find($id);
 
@@ -254,44 +257,28 @@ class SuggestionPdfService
         $acc  = str_pad($suggestion->Acceptance_First_Suggestion ?? 0, 5, '0', STR_PAD_LEFT);
         $path = "{$dir}/Saran_Perbaikan_{$bulan}_{$acc}.pdf";
 
-        // === Simpan ke XLSX sementara ===
-        $tempXlsx = storage_path('app/tmp_saran_' . $suggestion->Id_Suggestion . '_' . time() . '.xlsx');
-        IOFactory::createWriter($spreadsheet, 'Xlsx')->save($tempXlsx);
+        // === Render PDF via Mpdf writer (pure PHP) ===
+        // Simpan ke file sementara dulu, lalu pindahkan ke path final agar
+        // kalau render gagal tidak meninggalkan file PDF yang rusak/parsial.
+        $tempPdf = storage_path('app/tmp_pdf_' . $suggestion->Id_Suggestion . '_' . time() . '.pdf');
+
+        $writer = new Mpdf($spreadsheet);
+        $writer->save($tempPdf);
+
         $spreadsheet->disconnectWorksheets();
         unset($spreadsheet);
 
-        // Hapus temp image files
+        // Hapus temp image files (lingkaran)
         foreach ($tmpFiles as $f) {
             if (file_exists($f)) @unlink($f);
         }
 
-        // === Convert via LibreOffice ===
-        $librePath = config('pdf.libreoffice_path');
-
-        $cmd = sprintf(
-            '"%s" --headless --convert-to pdf "%s" --outdir "%s"',
-            $librePath,
-            $tempXlsx,
-            dirname($tempXlsx)
-        );
-
-        exec($cmd, $output, $resultCode);
-
-
-
-        @unlink($tempXlsx);
-
-        if ($resultCode !== 0) {
-            throw new \Exception('LibreOffice gagal convert (code ' . $resultCode . '): ' . implode("\n", $output));
+        if (!file_exists($tempPdf) || filesize($tempPdf) === 0) {
+            @unlink($tempPdf);
+            throw new \Exception('Gagal menghasilkan PDF via Mpdf (file kosong).');
         }
 
-        $tempPdf = preg_replace('/\.xlsx$/i', '.pdf', $tempXlsx);
-
-        if (!file_exists($tempPdf)) {
-            throw new \Exception('PDF tidak ditemukan setelah konversi LibreOffice.');
-        }
-
-        // Pindahkan ke path final
+        // Pindahkan ke path final (overwrite)
         if (file_exists($path)) {
             unlink($path);
         }
@@ -299,6 +286,8 @@ class SuggestionPdfService
         rename($tempPdf, $path);
 
         Log::info("PDF berhasil dibuat: {$path}");
+
+        return $path;
     }
 
     /**
@@ -306,13 +295,16 @@ class SuggestionPdfService
      * Save akan langsung selesai, PDF dibuat oleh queue worker.
      *
      * @param int $id
+     * @return bool true jika berhasil diantrekan ke queue
      */
-    public function dispatchBackground(int $id): void
+    public function dispatchBackground(int $id): bool
     {
         try {
             GeneratePdfJob::dispatch($id);
+            return true;
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::warning('Gagal dispatch GeneratePdfJob (ID ' . $id . '): ' . $e->getMessage());
+            return false;
         }
     }
 

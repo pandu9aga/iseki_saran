@@ -96,7 +96,12 @@
                             <h5 class="modal-title text-primary">
                                 Daftar PDF Saran <span id="modalMonth"></span>
                             </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" id="btnRefreshPdfList" class="btn btn-sm btn-outline-primary">
+                                    <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">refresh</i> Refresh
+                                </button>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
                         </div>
 
                         <div class="modal-body">
@@ -518,7 +523,10 @@
         });
     </script>
     <script>
-        $('#btnExportAllPdf').on('click', function () {
+        let pdfPollTimer = null;
+        let pdfPollAttempts = 0;
+
+        function loadPdfList(usePolling) {
             const month = $('#monthFilter').val();
 
             if (!month) {
@@ -531,8 +539,6 @@
             $('#totalSuggestion').text('0');
             $('#totalPdfReady').text('0');
             $('#divisionDownloadBtns').html('');
-
-            $('#modalExportPdfAll').modal('show');
 
             $.ajax({
                 url: "{{ route('leader.suggestion.exportAllPdf.list') }}",
@@ -617,6 +623,14 @@
                     }
 
                     $('#divisionDownloadBtns').html(btnHtml);
+
+                    // === Auto-polling: refresh otomatis sampai semua PDF siap ===
+                    if (usePolling && res.total > 0 && res.pdf_ready < res.total && pdfPollAttempts < 40) {
+                        pdfPollAttempts++;
+                        pdfPollTimer = setTimeout(function () {
+                            loadPdfList(true);
+                        }, 3000);
+                    }
                 },
                 error: function () {
                     $('#pdfBadgeContainer').html(
@@ -624,6 +638,24 @@
                     );
                 }
             });
+        }
+
+        $('#btnExportAllPdf').on('click', function () {
+            pdfPollAttempts = 0;
+            if (pdfPollTimer) clearTimeout(pdfPollTimer);
+            $('#modalExportPdfAll').modal('show');
+            loadPdfList(true);
+        });
+
+        $('#btnRefreshPdfList').on('click', function () {
+            pdfPollAttempts = 0;
+            if (pdfPollTimer) clearTimeout(pdfPollTimer);
+            loadPdfList(true);
+        });
+
+        $('#modalExportPdfAll').on('hidden.bs.modal', function () {
+            if (pdfPollTimer) clearTimeout(pdfPollTimer);
+            pdfPollTimer = null;
         });
     </script>
     <script>
