@@ -34,6 +34,10 @@ class Suggestion extends Model
         'Hour_Suggestion'
     ];
 
+    protected $casts = [
+        'Hour_Suggestion' => 'float',
+    ];
+
     public function member()
     {
         return $this->belongsTo(Member::class, 'Id_Member', 'id');

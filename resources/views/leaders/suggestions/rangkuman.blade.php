@@ -126,7 +126,7 @@
                                     <td class="text-center">{{ $data[$m]['saran'] }}</td>
                                     <td class="text-center">{{ $data[$m]['selesai'] }}</td>
                                     <td class="text-center">{{ $data[$m]['nilai_lebih5'] }}</td>
-                                    <td class="text-center">{{ $data[$m]['total_jam'] ?? 0 }}</td>
+                                    <td class="text-center">{{ isset($data[$m]['total_jam']) ? (float)$data[$m]['total_jam'] : 0 }}</td>
                                     <td class="text-center">Rp. {{ number_format($keuntungan, 0, ',', '.') }}</td>
                                 </tr>
                             @endfor
@@ -137,7 +137,7 @@
                                 <td class="text-center">{{ $totalSaran }}</td>
                                 <td class="text-center">{{ $totalSelesai }}</td>
                                 <td class="text-center">{{ $totalLebih5 }}</td>
-                                <td class="text-center">{{ $totalJam }}</td>
+                                <td class="text-center">{{ (float)$totalJam }}</td>
                                 <td class="text-center">Rp. {{ number_format($totalKeuntungan, 0, ',', '.') }}</td>
                             </tr>
                         </tfoot>
@@ -178,7 +178,7 @@
             var saranData = [@for($m=1;$m<=12;$m++){{ $data[$m]['saran'] }}{{ $m<12?',':'' }}@endfor];
             var selesaiData = [@for($m=1;$m<=12;$m++){{ $data[$m]['selesai'] }}{{ $m<12?',':'' }}@endfor];
             var nilaiLebih5Data = [@for($m=1;$m<=12;$m++){{ $data[$m]['nilai_lebih5'] }}{{ $m<12?',':'' }}@endfor];
-            var totalJamData = [@for($m=1;$m<=12;$m++){{ $data[$m]['total_jam'] ?? 0 }}{{ $m<12?',':'' }}@endfor];
+            var totalJamData = [@for($m=1;$m<=12;$m++){{ isset($data[$m]['total_jam']) ? (float)$data[$m]['total_jam'] : 0 }}{{ $m<12?',':'' }}@endfor];
 
             function createLineChart(canvasId, label, data, color) {
                 var ctx = document.getElementById(canvasId).getContext('2d');

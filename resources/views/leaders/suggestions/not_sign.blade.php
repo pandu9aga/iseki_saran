@@ -142,8 +142,8 @@
                         data: 'Hour_Suggestion',
                         name: 'Hour_Suggestion',
                         render: function(data, type, row) {
-                            if (data === null || data === '') return '';
-                            return data + ' jam';
+                            if (data === null || data === '' || data === undefined) return '';
+                            return parseFloat(data) + ' jam';
                         }
                     },
                     {
