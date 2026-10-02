@@ -465,12 +465,15 @@
             const saveUrl = "{{ route('leader.suggestion.saveAll', $suggestion->Id_Suggestion) }}";
 
             // ===== AUTO-SAVE RINGAN (TANPA PDF, TANPA LOADING) =====
-            function triggerAutoSave(callback) {
+            // generatePdf: hanya dikirim saat tombol Simpan / Simpan & Lanjut / Simpan & Selesai
+            // ditekan, supaya PDF dibuat ulang secara sinkron (render Mpdf di dalam request).
+            function triggerAutoSave(callback, generatePdf) {
+                const payload = { _token: csrf, ...collectFields(), generate_pdf: generatePdf === true };
                 $.ajax({
                     url: saveUrl,
                     method: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({ _token: csrf, ...collectFields() }),
+                    data: JSON.stringify(payload),
                     success: function(res) {
                         if (typeof callback === 'function') callback(res);
                     },
@@ -479,6 +482,21 @@
                         if (typeof callback === 'function') callback(null);
                     }
                 });
+            }
+
+            // ===== SIMPAN + GENERATE PDF (loading indicator) =====
+            function saveWithPdf(callback) {
+                Swal.fire({
+                    title: 'Menyimpan & Generate PDF...',
+                    html: 'Mohon tunggu sebentar, proses pembuatan PDF sedang berjalan.',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    didOpen: () => Swal.showLoading()
+                });
+                triggerAutoSave(function(res) {
+                    Swal.close();
+                    if (typeof callback === 'function') callback(res);
+                }, true);
             }
 
             // Bind auto-save ke semua input form ketika berubah
@@ -507,11 +525,11 @@
 
             // ===== TOMBOL BAWAH: SIMPAN (Reload halaman yang sama) =====
             $('#btnSaveAll').on('click', function() {
-                triggerAutoSave(function(res) {
+                saveWithPdf(function() {
                     Swal.fire({
                         icon: 'success',
-                        title: 'Data berhasil disimpan!',
-                        timer: 1000,
+                        title: 'Data berhasil disimpan! PDF siap diunduh.',
+                        timer: 1200,
                         showConfirmButton: false
                     }).then(() => location.reload());
                 });
@@ -523,7 +541,7 @@
                 const month  = '{{ $month }}';
                 let nextUrl  = '/iseki_saran/public/leader/suggestion/' + nextId + '?source=not-sign';
                 if (month) nextUrl += '&month=' + encodeURIComponent(month);
-                triggerAutoSave(function() {
+                saveWithPdf(function() {
                     window.location.href = nextUrl;
                 });
             });
@@ -533,7 +551,7 @@
                 const month = '{{ $month }}';
                 let redirectUrl = '{{ route("leader.suggestion.notSign") }}';
                 if (month) redirectUrl += '?month=' + encodeURIComponent(month);
-                triggerAutoSave(function() {
+                saveWithPdf(function() {
                     window.location.href = redirectUrl;
                 });
             });
