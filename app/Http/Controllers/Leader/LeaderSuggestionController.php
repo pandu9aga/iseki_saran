@@ -1184,6 +1184,437 @@ class LeaderSuggestionController extends Controller
         return response()->json(['status' => 'ok']);
     }
 
+    /**
+     * @deprecated Sudah digantikan dengan service class.
+     */
+    public function convertPdf($id): void
+    {
+        $suggestion = Suggestion::with(['user', 'member'])->find($id);
+        if (! $suggestion) {
+            return;
+        }
+
+        // ===============================
+        // LOAD TEMPLATE EXCEL
+        // ===============================
+        $spreadsheet = IOFactory::load(
+            storage_path('app/templates/saran_perbaikan.xlsx')
+        );
+
+        // bersihkan defined name (penting agar PDF stabil)
+        foreach ($spreadsheet->getDefinedNames() as $definedName) {
+            $spreadsheet->removeDefinedName($definedName->getName());
+        }
+
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // ===============================
+        // MAPPING CELL (SAMA PERSIS)
+        // ===============================
+        $sheet->setCellValue('K4', $suggestion->Date_First_Suggestion ?? '');
+        $sheet->setCellValue('AD4', $suggestion->Date_Last_Suggestion ?? '');
+        $sheet->setCellValue('C5', $suggestion->member->nik ?? '');
+        $sheet->setCellValue('Q5', $suggestion->Team_Suggestion ?? '');
+        $sheet->setCellValue('Y5', $suggestion->member->nama ?? '');
+        $sheet->setCellValue('Q11', $suggestion->Theme_Suggestion ?? '');
+        $sheet->setCellValue('B16', $suggestion->Content_Suggestion ?? '');
+        $sheet->setCellValue('AG16', $suggestion->Improvement_Suggestion ?? '');
+        $sheet->setCellValue('AF38', $suggestion->Comment_Suggestion ?? '');
+        $sheet->setCellValue('BC39', $suggestion->user->Name_User ?? '');
+
+        // ======================================================
+        // === Lingkaran outline pink berdasarkan Theme_Suggestion ===
+        $positions = [
+            'keselamatan' => 'C8',
+            'kualitas' => 'E8',
+            'cost' => 'G8',
+            'waktu' => 'I8',
+            'lingkungan' => 'K8',
+            'moral' => 'M8',
+            'fasilitas' => 'W15',
+            'mould jig' => 'AA15',
+            'set up' => 'AG15',
+            'material' => 'AK15',
+            'metode' => 'AO15',
+            'informasi' => 'AS15',
+        ];
+
+        $theme = strtolower(trim($suggestion->Theme_Suggestion ?? ''));
+        $targetCell = null;
+        foreach ($positions as $keyword => $cell) {
+            if (stripos($theme, $keyword) !== false) {
+                $targetCell = $cell;
+                break;
+            }
+        }
+
+        $tmpFiles = []; // simpan semua temp file supaya bisa dihapus nanti
+
+        if ($targetCell && function_exists('imagecreatetruecolor')) {
+            $size = 80;
+            $thickness = 10;
+            $img = imagecreatetruecolor($size, $size);
+            imagesavealpha($img, true);
+            $transparent = imagecolorallocatealpha($img, 0, 0, 0, 127);
+            imagefill($img, 0, 0, $transparent);
+
+            $pink = imagecolorallocate($img, 255, 0, 151);
+            imagesetthickness($img, $thickness);
+            $margin = $thickness + 6;
+            imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $pink);
+
+            $tmpFile = sys_get_temp_dir().'/circle_theme_'.$suggestion->Id_Suggestion.'.png';
+            imagepng($img, $tmpFile);
+            imagedestroy($img);
+            $tmpFiles[] = $tmpFile;
+
+            $drawing = new Drawing;
+            $drawing->setName('ThemeCircle');
+            $drawing->setPath($tmpFile);
+            $drawing->setCoordinates($targetCell);
+            $specialCells = ['C8', 'E8', 'G8', 'I8', 'K8', 'M8'];
+            if (in_array($targetCell, $specialCells)) {
+                $drawing->setOffsetX(12);
+                $drawing->setOffsetY(-3);
+            } else {
+                $drawing->setOffsetX(-3);
+                $drawing->setOffsetY(0);
+            }
+            $drawing->setWidth(36);
+            $drawing->setHeight(36);
+            $drawing->setWorksheet($sheet);
+        }
+
+        // === Lingkaran oranye di Status (AL5 untuk 0, AN5 untuk 1) ===
+        $statusCell = null;
+        if ($suggestion->Status_Suggestion == 0) {
+            $statusCell = 'AL5';
+        } elseif ($suggestion->Status_Suggestion == 1) {
+            $statusCell = 'AN5';
+        }
+
+        if ($statusCell && function_exists('imagecreatetruecolor')) {
+            $size = 80;
+            $thickness = 10;
+            $img = imagecreatetruecolor($size, $size);
+            imagesavealpha($img, true);
+            $transparent = imagecolorallocatealpha($img, 0, 0, 0, 127);
+            imagefill($img, 0, 0, $transparent);
+
+            $orange = imagecolorallocate($img, 212, 109, 0); // oranye
+            imagesetthickness($img, $thickness);
+            $margin = $thickness + 6;
+            imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $orange);
+
+            $tmpFile = sys_get_temp_dir().'/circle_status_'.$suggestion->Id_Suggestion.'.png';
+            imagepng($img, $tmpFile);
+            imagedestroy($img);
+            $tmpFiles[] = $tmpFile;
+
+            $drawing = new Drawing;
+            $drawing->setName('StatusCircle');
+            $drawing->setPath($tmpFile);
+            $drawing->setCoordinates($statusCell);
+            $drawing->setOffsetX(-2);
+            $drawing->setOffsetY(5);
+            $drawing->setWidth(64);
+            $drawing->setHeight(64);
+            $drawing->setWorksheet($sheet);
+        }
+
+        // === Lingkaran outline hitam berdasarkan Score_A_Suggestion ===
+        $scoreMap = [
+            0 => 'E37',
+            1 => 'F37',
+            2 => 'G37',
+            3 => 'H37',
+            4 => 'I37',
+            5 => 'J37',
+            6 => 'K37',
+            7 => 'L37',
+            8 => 'M37',
+            9 => 'O37',
+            10 => 'Q37',
+            11 => 'S37',
+            12 => 'U37',
+            13 => 'W37',
+            14 => 'Y37',
+            15 => 'AA37',
+        ];
+
+        if (! is_null($suggestion->Score_A_Suggestion) && isset($scoreMap[$suggestion->Score_A_Suggestion])) {
+            $scoreCell = $scoreMap[$suggestion->Score_A_Suggestion];
+
+            if (function_exists('imagecreatetruecolor')) {
+                $size = 80;
+                $thickness = 10;
+                $img = imagecreatetruecolor($size, $size);
+                imagesavealpha($img, true);
+                $transparent = imagecolorallocatealpha($img, 0, 0, 0, 127);
+                imagefill($img, 0, 0, $transparent);
+
+                $black = imagecolorallocate($img, 0, 0, 0);
+                imagesetthickness($img, $thickness);
+                $margin = $thickness + 6;
+                imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $black);
+
+                $tmpFile = sys_get_temp_dir().'/circle_score_'.$suggestion->Id_Suggestion.'.png';
+                imagepng($img, $tmpFile);
+                imagedestroy($img);
+                $tmpFiles[] = $tmpFile;
+
+                $drawing = new Drawing;
+                $drawing->setName('ScoreCircle');
+                $drawing->setPath($tmpFile);
+                $drawing->setCoordinates($scoreCell);
+                // offset beda untuk 0–7 dan 8–15
+                if ($suggestion->Score_A_Suggestion <= 7) {
+                    $drawing->setOffsetX(0);
+                } else {
+                    $drawing->setOffsetX(15);
+                }
+                $drawing->setOffsetY(-2);
+                $drawing->setWidth(32);
+                $drawing->setHeight(32);
+                $drawing->setWorksheet($sheet);
+            }
+        }
+
+        // === Lingkaran outline hitam berdasarkan Score_B_Suggestion (JSON) ===
+        if (! empty($suggestion->Score_B_Suggestion)) {
+            $scoreB = json_decode($suggestion->Score_B_Suggestion, true);
+
+            if (is_array($scoreB)) {
+                $mappingB = [
+                    'kreatifitas' => [
+                        0 => 'Y42',
+                        1 => 'Z42',
+                        2 => 'AA42',
+                        3 => 'AB42',
+                        4 => 'AC42',
+                        5 => 'AD42',
+                    ],
+                    'ide' => [
+                        0 => 'Y43',
+                        1 => 'Z43',
+                        2 => 'AA43',
+                        3 => 'AB43',
+                        4 => 'AC43',
+                        5 => 'AD43',
+                    ],
+                    'usaha' => [
+                        0 => 'Y44',
+                        1 => 'Z44',
+                        2 => 'AA44',
+                        3 => 'AB44',
+                        4 => 'AC44',
+                        5 => 'AD44',
+                    ],
+                ];
+
+                $total = 0;
+                foreach ($mappingB as $key => $map) {
+                    if (isset($scoreB[$key])) {
+                        $val = (int) $scoreB[$key];
+                        $total += $val;
+
+                        if (isset($map[$val]) && function_exists('imagecreatetruecolor')) {
+                            $cell = $map[$val];
+                            $size = 80;
+                            $thickness = 10;
+                            $img = imagecreatetruecolor($size, $size);
+                            imagesavealpha($img, true);
+                            $transparent = imagecolorallocatealpha($img, 0, 0, 0, 127);
+                            imagefill($img, 0, 0, $transparent);
+
+                            $black = imagecolorallocate($img, 0, 0, 0);
+                            imagesetthickness($img, $thickness);
+                            $margin = $thickness + 6;
+                            imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $black);
+
+                            $tmpFile = sys_get_temp_dir().'/circle_scoreB_'.$key.'_'.$suggestion->Id_Suggestion.'.png';
+                            imagepng($img, $tmpFile);
+                            imagedestroy($img);
+                            $tmpFiles[] = $tmpFile;
+
+                            $drawing = new Drawing;
+                            $drawing->setName('ScoreB_'.$key);
+                            $drawing->setPath($tmpFile);
+                            $drawing->setCoordinates($cell);
+                            $drawing->setOffsetX(0);
+                            $drawing->setOffsetY(-2);
+                            $drawing->setWidth(32);
+                            $drawing->setHeight(32);
+                            $drawing->setWorksheet($sheet);
+                        }
+                    }
+                }
+
+                // Tulis total ke AA45
+                $sheet->setCellValue('AA45', $suggestion->total_score);
+            }
+        }
+
+        // === Insert gambar Content & Improvement ===
+        if (! empty($suggestion->Content_Photos_Suggestion)) {
+            $contentPhotos = json_decode($suggestion->Content_Photos_Suggestion, true);
+
+            if (is_array($contentPhotos)) {
+                foreach ($contentPhotos as $i => $photoName) {
+                    $filePath = public_path('uploads/contents/'.$photoName);
+                    if (! empty($photoName) && file_exists($filePath)) {
+                        $cell = $i == 0 ? 'B19' : ($i == 1 ? 'B24' : null);
+                        if ($cell) {
+                            $drawing = new Drawing;
+                            $drawing->setName('ContentPhoto'.($i + 1));
+                            $drawing->setPath($filePath);
+                            $drawing->setCoordinates($cell);
+                            $drawing->setOffsetX(200);
+                            $drawing->setOffsetY(20);
+                            $drawing->setWidthAndHeight(660, 420); // otomatis scale
+                            $drawing->setWorksheet($sheet);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (! empty($suggestion->Improvement_Photos_Suggestion)) {
+            $improvePhotos = json_decode($suggestion->Improvement_Photos_Suggestion, true);
+
+            if (is_array($improvePhotos)) {
+                foreach ($improvePhotos as $i => $photoName) {
+                    $filePath = public_path('uploads/improvements/'.$photoName);
+                    if (! empty($photoName) && file_exists($filePath)) {
+                        $cell = $i == 0 ? 'AG19' : ($i == 1 ? 'AG24' : null);
+                        if ($cell) {
+                            $drawing = new Drawing;
+                            $drawing->setName('ImprovementPhoto'.($i + 1));
+                            $drawing->setPath($filePath);
+                            $drawing->setCoordinates($cell);
+                            $drawing->setOffsetX(200);
+                            $drawing->setOffsetY(20);
+                            $drawing->setWidthAndHeight(660, 420); // otomatis scale
+                            $drawing->setWorksheet($sheet);
+                        }
+                    }
+                }
+            }
+        }
+
+        // === Mapping Acceptance_First_Suggestion ===
+        if (! empty($suggestion->Acceptance_First_Suggestion)) {
+            // Prefix berdasarkan divisi: Assembling=620, Painting=621, DST=623
+            $teamPrefix = match (strtolower(trim($suggestion->Team_Suggestion ?? ''))) {
+                'assembling' => 0,
+                'painting' => 1,
+                'dst' => 3,
+                default => 0,
+            };
+
+            // isi AR3, AT3, AV3 (prefix nomor)
+            $sheet->setCellValue('AR3', 6);
+            $sheet->setCellValue('AT3', 2);
+            $sheet->setCellValue('AV3', $teamPrefix);
+
+            // format jadi 5 digit (misal: 00001, 00025, dst)
+            $accFirst = str_pad($suggestion->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT);
+
+            // isi digit ke cell
+            $sheet->setCellValue('AX3', substr($accFirst, 0, 1));
+            $sheet->setCellValue('AZ3', substr($accFirst, 1, 1));
+            $sheet->setCellValue('BB3', substr($accFirst, 2, 1));
+            $sheet->setCellValue('BD3', substr($accFirst, 3, 1));
+            $sheet->setCellValue('BF3', substr($accFirst, 4, 1));
+        }
+
+        // ===============================
+        // PAGE SETUP PDF
+        // ===============================
+        $sheet->getPageSetup()
+            ->setPaperSize(PageSetup::PAPERSIZE_A4)
+            // ->setOrientation(PageSetup::ORIENTATION_POTRAIT)
+            ->setFitToWidth(1)
+            ->setFitToHeight(1);
+
+        $sheet->getPageMargins()
+            ->setTop(0.2)
+            ->setBottom(0.2)
+            ->setLeft(0.2)
+            ->setRight(0.2);
+
+        // ===============================
+        // PATH OUTPUT PDF
+        // ===============================
+        $bulan = date('Y-m', strtotime($suggestion->Date_First_Suggestion));
+        $dir = public_path("uploads/pdf/{$bulan}");
+
+        if (! is_dir($dir)) {
+            mkdir($dir, 0777, true);
+        }
+
+        $acc = str_pad($suggestion->Acceptance_First_Suggestion ?? 0, 5, '0', STR_PAD_LEFT);
+        $path = "{$dir}/Saran_Perbaikan_{$bulan}_{$acc}.pdf";
+
+        // === Simpan ke XLSX ===
+        $tempXlsx = storage_path('app/tmp_saran_'.$suggestion->Id_Suggestion.'_'.time().'.xlsx');
+        IOFactory::createWriter($spreadsheet, 'Xlsx')->save($tempXlsx);
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet);
+
+        // === Convert via LibreOffice dengan Isolated User Profile ===
+        $librePath = 'C:\xampp\htdocs\iseki_saran\storage\app\LibreOfficePortable\App\libreoffice\program\soffice.exe';
+        $tempProfileDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'soffice_profile_' . uniqid();
+        $profileUrl = 'file:///' . str_replace('\\', '/', $tempProfileDir);
+
+        $cmd = sprintf(
+            '"%s" --headless "-env:UserInstallation=%s" --convert-to pdf "%s" --outdir "%s"',
+            $librePath,
+            $profileUrl,
+            $tempXlsx,
+            dirname($tempXlsx)
+        );
+
+        exec($cmd, $output, $resultCode);
+
+        // Helper untuk menghapus folder profil secara rekursif
+        $deleteDir = function($dirPath) use (&$deleteDir) {
+            if (!is_dir($dirPath)) return;
+            $files = array_diff(scandir($dirPath), ['.', '..']);
+            foreach ($files as $file) {
+                (is_dir("$dirPath/$file")) ? $deleteDir("$dirPath/$file") : @unlink("$dirPath/$file");
+            }
+            @rmdir($dirPath);
+        };
+
+        // Hapus folder profil sementara setelah perintah selesai dijalankan
+        $deleteDir($tempProfileDir);
+
+        if ($resultCode !== 0) {
+            @unlink($tempXlsx);
+            throw new \Exception('LibreOffice gagal convert: '.implode("\n", $output));
+        }
+
+        $tempPdf = preg_replace('/\.xlsx$/i', '.pdf', $tempXlsx);
+
+        if (! file_exists($tempPdf)) {
+            @unlink($tempXlsx);
+            throw new \Exception('PDF tidak ditemukan setelah konversi.');
+        }
+
+        // === Move ke path final ===
+        if (file_exists($path)) {
+            unlink($path);
+        }
+
+        rename($tempPdf, $path);
+
+        // === Cleanup ===
+        @unlink($tempXlsx);
+        $pdfService = app(SuggestionPdfService::class);
+        $pdfService->generate((int) $id);
+    }
+
     public function finalizeSuggestion($id)
     {
         $suggestion = Suggestion::findOrFail($id);

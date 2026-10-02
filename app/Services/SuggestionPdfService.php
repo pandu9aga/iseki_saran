@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Jobs\GeneratePdfJob;
 use App\Models\Suggestion;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
@@ -266,8 +265,8 @@ class SuggestionPdfService
         }
 
         // === Convert via LibreOffice ===
-        $librePath = config('pdf.libreoffice_path');
-
+        $librePath      = 'C:\\xampp\\htdocs\\iseki_saran\\storage\\app\\LibreOfficePortable\\LibreOfficePortable.exe';
+        
         $cmd = sprintf(
             '"%s" --headless --convert-to pdf "%s" --outdir "%s"',
             $librePath,
@@ -302,18 +301,24 @@ class SuggestionPdfService
     }
 
     /**
-     * Dispatch konversi PDF ke queue (non-blocking).
-     * Save akan langsung selesai, PDF dibuat oleh queue worker.
+     * Dispatch konversi PDF ke background process (non-blocking).
+     * Save akan langsung selesai, PDF dibuat di belakang layar.
      *
      * @param int $id
      */
     public function dispatchBackground(int $id): void
     {
-        try {
-            GeneratePdfJob::dispatch($id);
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning('Gagal dispatch GeneratePdfJob (ID ' . $id . '): ' . $e->getMessage());
-        }
+        $url = url('/api/internal/generate-pdf/' . $id);
+        
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(['dummy' => 1]));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        // Timeout 1 milidetik agar tidak menunggu (fire and forget)
+        curl_setopt($ch, CURLOPT_TIMEOUT_MS, 100);
+        curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
+        @curl_exec($ch);
+        @curl_close($ch);
     }
 
     // ===============================
