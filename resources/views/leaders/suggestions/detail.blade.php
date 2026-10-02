@@ -37,23 +37,10 @@
 
         <div class="card table-card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h4 class="text-primary mb-0">Detail Saran</h4>
-                <div class="d-flex gap-2">
-                    @php
-                        $bulanPdf = $suggestion->Date_First_Suggestion ? date('Y-m', strtotime($suggestion->Date_First_Suggestion)) : null;
-                        $accPdf = $suggestion->Acceptance_First_Suggestion ? str_pad($suggestion->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT) : null;
-                        $pdfRelPath = ($bulanPdf && $accPdf) ? "uploads/pdf/{$bulanPdf}/Saran_Perbaikan_{$bulanPdf}_{$accPdf}.pdf" : null;
-                        $hasPdf = $pdfRelPath && file_exists(public_path($pdfRelPath));
-                    @endphp
-                    @if($hasPdf)
-                        <a href="{{ asset($pdfRelPath) }}" target="_blank" class="btn btn-danger btn-sm">
-                            <i class="material-icons-two-tone text-white" style="font-size:16px;">picture_as_pdf</i> Cetak PDF
-                        </a>
-                    @endif
-                    <a href="{{ route('leader.suggestion.export', $suggestion->Id_Suggestion) }}" class="btn btn-success btn-sm">
-                        <i class="material-icons-two-tone text-white" style="font-size:16px;">download</i> Export Excel
-                    </a>
-                </div>
+                <h4 class="text-primary">Detail Saran</h4>
+                <a href="{{ route('leader.suggestion.export', $suggestion->Id_Suggestion) }}" class="btn btn-success btn-sm">
+                    <i class="material-icons-two-tone text-white" style="font-size:16px;">download</i> Export Excel
+                </a>
             </div>
 
             <div class="card-body p-3">
@@ -538,11 +525,10 @@
 
             // ===== TOMBOL BAWAH: SIMPAN (Reload halaman yang sama) =====
             $('#btnSaveAll').on('click', function() {
-                saveWithPdf(function(res) {
-                    const isPdfReady = res && res.pdf_ready;
+                saveWithPdf(function() {
                     Swal.fire({
                         icon: 'success',
-                        title: isPdfReady ? 'Data berhasil disimpan & PDF siap dicetak!' : 'Data berhasil disimpan!',
+                        title: 'Data berhasil disimpan! PDF siap diunduh.',
                         timer: 1200,
                         showConfirmButton: false
                     }).then(() => location.reload());

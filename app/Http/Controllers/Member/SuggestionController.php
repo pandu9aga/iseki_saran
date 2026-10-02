@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\File;
 use Carbon\Carbon;
 use App\Models\Member;
 use App\Models\Suggestion;
-use App\Services\ImageResizeService;
 use Yajra\DataTables\Facades\DataTables;
 
 class SuggestionController extends Controller
@@ -41,20 +40,24 @@ class SuggestionController extends Controller
             foreach ($request->Content_Photos_Suggestion as $i => $base64) {
                 if (!$base64) continue;
 
-                // Hapus header base64 jika ada
+                // Ambil ekstensi dari base64
+                preg_match('/^data:image\/(\w+);base64,/', $base64, $type);
+                $extension = $type[1] ?? 'png';
+
+                // Hapus header base64
                 $data = preg_replace('/^data:image\/\w+;base64,/', '', $base64);
                 $data = str_replace(' ', '+', $data);
-                $binary = base64_decode($data);
 
-                // Resize dan simpan foto ke ukuran kecil (max 1000px, JPEG 82%)
-                $filename = ImageResizeService::resizeAndSave(
-                    $binary,
-                    public_path('uploads/contents'),
-                    time() . '_' . $i . '_' . uniqid() . '.jpg',
-                    1000,
-                    82
-                );
+                // Simpan ke file
+                $filename = time().'_'.$i.'_'.uniqid().'.'.$extension;
+                $path = public_path('uploads/contents/'.$filename);
 
+                // Pastikan folder ada
+                if (!File::exists(public_path('uploads/contents'))) {
+                    File::makeDirectory(public_path('uploads/contents'), 0777, true);
+                }
+
+                File::put($path, base64_decode($data));
                 $savedPhotos[] = $filename;
             }
         }
@@ -258,18 +261,12 @@ class SuggestionController extends Controller
 
             if ($request->hasFile('photo')) {
                 $file = $request->file('photo');
-                // Resize foto ke ukuran kecil sebelum disimpan
-                $name = ImageResizeService::resizeAndSave(
-                    $file,
-                    public_path('uploads/contents'),
-                    time() . '_' . uniqid() . '.jpg',
-                    1000,
-                    82
-                );
+                $name = time().'_'.uniqid().'.'.$file->getClientOriginalExtension();
+                $file->move(public_path('uploads/contents'), $name);
 
                 // Hapus lama
                 if (!empty($photos[$slot]) && file_exists(public_path('uploads/contents/'.$photos[$slot]))) {
-                    @unlink(public_path('uploads/contents/'.$photos[$slot]));
+                    unlink(public_path('uploads/contents/'.$photos[$slot]));
                 }
 
                 $photos[$slot] = $name;
@@ -287,18 +284,12 @@ class SuggestionController extends Controller
 
             if ($request->hasFile('photo')) {
                 $file = $request->file('photo');
-                // Resize foto ke ukuran kecil sebelum disimpan
-                $name = ImageResizeService::resizeAndSave(
-                    $file,
-                    public_path('uploads/improvements'),
-                    time() . '_' . uniqid() . '.jpg',
-                    1000,
-                    82
-                );
+                $name = time().'_'.uniqid().'.'.$file->getClientOriginalExtension();
+                $file->move(public_path('uploads/improvements'), $name);
 
                 // Hapus lama
                 if (!empty($photos[$slot]) && file_exists(public_path('uploads/improvements/'.$photos[$slot]))) {
-                    @unlink(public_path('uploads/improvements/'.$photos[$slot]));
+                    unlink(public_path('uploads/improvements/'.$photos[$slot]));
                 }
 
                 $photos[$slot] = $name;
