@@ -88,7 +88,6 @@
                             <th class="text-primary">Leader</th>
                             <th class="text-primary">Status</th>
                             <th class="text-primary">Tema</th>
-                            <th class="text-primary">Total Jam Perbaikan</th>
                             <th class="text-primary">No Penerimaan Awal</th>
                             <th class="text-primary">Tanggal Penyerahan Akhir</th>
                             <th class="text-primary">No Penerimaan Akhir</th>
@@ -223,7 +222,6 @@ $(document).ready(function () {
             { data: 'user_name', name: 'users.Name_User' },
             { data: 'Status_Suggestion', name: 'Status_Suggestion' },
             { data: 'Theme_Suggestion', name: 'Theme_Suggestion' },
-            { data: 'Hour_Suggestion', name: 'Hour_Suggestion' },
             { data: 'Acceptance_First_Suggestion', name: 'Acceptance_First_Suggestion' },
             { data: 'Date_Last_Suggestion', name: 'Date_Last_Suggestion' },
             { data: 'Acceptance_Last_Suggestion', name: 'Acceptance_Last_Suggestion' },

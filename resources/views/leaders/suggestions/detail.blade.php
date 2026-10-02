@@ -277,15 +277,10 @@
                             <tr>
                                 <th>Jam Perbaikan</th>
                                 <td>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <input type="number" name="Hour_Suggestion" 
-                                            class="form-control form-control-sm" 
-                                            value="{{ $suggestion->Hour_Suggestion ?? '' }}" 
-                                            placeholder="Masukkan jam" 
-                                            min="0" step="0.5"
-                                            style="max-width: 120px;">
-                                        <span class="text-muted">jam</span>
-                                    </div>
+                                    {{ $suggestion->Hour_Suggestion ?? '-' }}
+                                    @if($suggestion->Hour_Suggestion)
+                                        jam
+                                    @endif
                                 </td>
                             </tr>
 
@@ -443,7 +438,6 @@
                         ide: $('[name="ide"]:checked').val(),
                         usaha: $('[name="usaha"]:checked').val()
                     },
-                    Hour_Suggestion: $('[name="Hour_Suggestion"]').val(),
                     Comment_Suggestion: $('[name="comment_option"]:checked').val() === 'custom'
                         ? $('[name="comment_custom"]').val()
                         : $('[name="comment_option"]:checked').val(),
@@ -482,10 +476,10 @@
             }
 
             // Bind auto-save ke semua input form ketika berubah
-            $(document).on('change', '[name="Status_Suggestion"], [name="Score_A_Suggestion"], [name="kreatifitas"], [name="ide"], [name="usaha"], [name="comment_option"], [name="Hour_Suggestion"]', function() {
+            $(document).on('change', '[name="Status_Suggestion"], [name="Score_A_Suggestion"], [name="kreatifitas"], [name="ide"], [name="usaha"], [name="comment_option"]', function() {
                 triggerAutoSave();
             });
-            $(document).on('blur', '[name="comment_custom"], [name="Hour_Suggestion"]', function() {
+            $(document).on('blur', '[name="comment_custom"]', function() {
                 triggerAutoSave();
             });
 
@@ -501,9 +495,14 @@
                 triggerAutoSave();
             });
 
-            // ===== NAVIGASI ATAS (PREV/NEXT/LIST) — langsung pindah tanpa auto-save =====
-            // Tidak auto-save agar Id_User tidak terisi otomatis (saran tidak tertanda "sudah dinilai")
-            // Biarkan link berjalan normal (tidak perlu preventDefault)
+            // ===== NAVIGASI ATAS (PREV/NEXT/LIST) — simpan lalu langsung pindah =====
+            $('.btn-nav-prev, .btn-nav-next, .btn-nav-list').on('click', function(e) {
+                e.preventDefault();
+                const targetUrl = $(this).attr('href');
+                triggerAutoSave(function() {
+                    window.location.href = targetUrl;
+                });
+            });
 
             // ===== TOMBOL BAWAH: SIMPAN (Reload halaman yang sama) =====
             $('#btnSaveAll').on('click', function() {
