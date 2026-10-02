@@ -47,6 +47,7 @@ Route::middleware(LeaderMiddleware::class)->group(function () {
     Route::get('/leadersuggestions/export-all', [LeaderSuggestionController::class, 'exportAll'])->name('leader.suggestion.exportAll');
     Route::post('/leader/suggestion/export-all-pdf', [LeaderSuggestionController::class, 'exportAllPdf'])->name('leader.suggestion.exportAllPdf');
     Route::get('/leader/suggestion/export-all-pdf/list', [LeaderSuggestionController::class, 'exportAllPdfList'])->name('leader.suggestion.exportAllPdf.list');
+    Route::post('/leader/suggestion/regenerate-all-pdf', [LeaderSuggestionController::class, 'regenerateAllPdf'])->name('leader.suggestion.regenerateAllPdf');
 
     Route::get('/member', [LeaderMemberController::class, 'index'])->name('member');
 });
