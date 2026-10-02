@@ -5,5 +5,12 @@ copy('C:\\xampp\\htdocs\\iseki_saran\\storage\\app\\templates\\saran_perbaikan.x
 
 $cmd = sprintf(
     '"%s" --headless --convert-to pdf "%s" --outdir "%s"',
+    $librePath,
+    $dummy,
+    dirname($dummy)
+);
+echo "Running:\n$cmd\n";
+exec($cmd, $output, $resultCode);
+
 echo "Exit Code: $resultCode\n";
 echo "Output:\n" . implode("\n", $output) . "\n";
