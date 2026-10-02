@@ -7,16 +7,14 @@ use App\Models\Suggestion;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
-use PhpOffice\PhpSpreadsheet\Writer\Pdf\Mpdf;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Illuminate\Support\Facades\Log;
 
 class SuggestionPdfService
 {
     /**
      * Generate PDF untuk satu suggestion berdasarkan ID.
-     * Render dilakukan 100% di dalam PHP via PhpSpreadsheet Mpdf writer
-     * (tanpa LibreOffice / aplikasi eksternal), sehingga bisa berjalan
-     * dari proses Apache/web request sekalipun.
+     * Render dilakukan via LibreOffice Portable.
      *
      * @param int $id
      * @return string path lengkap PDF yang berhasil dibuat
@@ -251,20 +249,35 @@ class SuggestionPdfService
         $acc  = str_pad($suggestion->Acceptance_First_Suggestion ?? 0, 5, '0', STR_PAD_LEFT);
         $path = "{$dir}/Saran_Perbaikan_{$bulan}_{$acc}.pdf";
 
-        // === Render PDF via Mpdf writer (pure PHP) ===
-        // Simpan ke file sementara dulu, lalu pindahkan ke path final agar
-        // kalau render gagal tidak meninggalkan file PDF yang rusak/parsial.
-        $tempPdf = storage_path('app/tmp_pdf_' . $suggestion->Id_Suggestion . '_' . time() . '.pdf');
+        // === Render PDF via LibreOffice Portable ===
+        $tempExcel = storage_path('app/tmp_excel_' . $suggestion->Id_Suggestion . '_' . time() . '.xlsx');
 
-        $writer = new Mpdf($spreadsheet);
-        $writer->save($tempPdf);
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tempExcel);
 
         $spreadsheet->disconnectWorksheets();
         unset($spreadsheet);
 
-        if (!file_exists($tempPdf) || filesize($tempPdf) === 0) {
+        if (!file_exists($tempExcel) || filesize($tempExcel) === 0) {
+            @unlink($tempExcel);
+            throw new \Exception('Gagal menyimpan file Excel sementara.');
+        }
+
+        $libreOfficePath = storage_path('app/LibreOfficePortable/App/libreoffice/program/soffice.exe');
+        $outdir = dirname($tempExcel);
+        
+        $command = "\"{$libreOfficePath}\" --headless --convert-to pdf \"{$tempExcel}\" --outdir \"{$outdir}\"";
+        
+        $output = [];
+        $returnVar = 0;
+        exec($command, $output, $returnVar);
+
+        $tempPdf = str_replace('.xlsx', '.pdf', $tempExcel);
+
+        if ($returnVar !== 0 || !file_exists($tempPdf) || filesize($tempPdf) === 0) {
+            @unlink($tempExcel);
             @unlink($tempPdf);
-            throw new \Exception('Gagal menghasilkan PDF via Mpdf (file kosong).');
+            throw new \Exception("Gagal konversi PDF via LibreOffice. Return: {$returnVar}");
         }
 
         // Pindahkan ke path final (overwrite) secara aman di Windows
@@ -277,7 +290,9 @@ class SuggestionPdfService
             @unlink($tempPdf);
         }
 
-        Log::info("PDF berhasil dibuat: {$path}");
+        @unlink($tempExcel);
+
+        Log::info("PDF berhasil dibuat via LibreOffice: {$path}");
 
         return $path;
     }
