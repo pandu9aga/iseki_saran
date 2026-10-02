@@ -210,8 +210,8 @@
 						<tr>
 							<th class="col-2">Jam Perbaikan</th>
 							<td id="value-Hour_Suggestion">
-								{{ $suggestion->Hour_Suggestion !== null && $suggestion->Hour_Suggestion !== '' ? (float)$suggestion->Hour_Suggestion : '-' }}
-								@if($suggestion->Hour_Suggestion !== null && $suggestion->Hour_Suggestion !== '')
+								{{ $suggestion->Hour_Suggestion ?? '-' }}
+								@if($suggestion->Hour_Suggestion)
 									jam
 								@endif
 								<button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
@@ -357,7 +357,7 @@
                 </div>
                 <div class="modal-body">
                     <input type="number" class="form-control" name="value" step="any" min="0"
-                        value="{{ $suggestion->Hour_Suggestion !== null && $suggestion->Hour_Suggestion !== '' ? (float)$suggestion->Hour_Suggestion : '' }}" placeholder="Contoh: 11 atau 13.5">
+                        value="{{ $suggestion->Hour_Suggestion }}" placeholder="Contoh: 11 atau 13.5">
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary">Simpan</button>
@@ -546,12 +546,7 @@
                 },
                 success: function (res) {
                     if (res.success) {
-                        if (field === 'Hour_Suggestion') {
-                            const formatted = (value !== null && value !== '') ? parseFloat(value) + ' jam' : '-';
-                            $('#value-' + field).html(formatted + ' <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalHour"><i class="material-icons-two-tone" style="font-size:16px;">edit</i></button>');
-                        } else {
-                            $('#value-' + field).text(value);
-                        }
+                        $('#value-' + field).text(value);
                         form.closest('.modal').modal('hide');
                     } else {
                         alert(res.message);

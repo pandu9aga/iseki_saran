@@ -146,11 +146,6 @@ class LeaderSuggestionController extends Controller
                     ? str_pad($row->Acceptance_Last_Suggestion, 5, '0', STR_PAD_LEFT)
                     : '';
             })
-            ->editColumn('Hour_Suggestion', function ($row) {
-                return $row->Hour_Suggestion !== null && $row->Hour_Suggestion !== ''
-                    ? (float) $row->Hour_Suggestion
-                    : null;
-            })
             ->addColumn('action', function ($row) {
                 return '
                     <a href="'.route('leader.suggestion.show', $row->Id_Suggestion).'" class="btn btn-sm btn-primary">
@@ -286,11 +281,6 @@ class LeaderSuggestionController extends Controller
                     ? str_pad($row->Acceptance_Last_Suggestion, 5, '0', STR_PAD_LEFT)
                     : ''
             )
-            ->editColumn('Hour_Suggestion', function ($row) {
-                return $row->Hour_Suggestion !== null && $row->Hour_Suggestion !== ''
-                    ? (float) $row->Hour_Suggestion
-                    : null;
-            })
             ->addColumn('action', fn ($row) => '
                 <a href="'.route('leader.suggestion.show', $row->Id_Suggestion).'" class="btn btn-sm btn-primary">
                     <span class="pc-micon"><i class="material-icons-two-tone text-white">edit</i></span>
@@ -1150,11 +1140,6 @@ class LeaderSuggestionController extends Controller
                     ? str_pad($row->Acceptance_Last_Suggestion, 5, '0', STR_PAD_LEFT)
                     : ''
             )
-            ->editColumn('Hour_Suggestion', function ($row) {
-                return $row->Hour_Suggestion !== null && $row->Hour_Suggestion !== ''
-                    ? (float) $row->Hour_Suggestion
-                    : null;
-            })
             ->addColumn('action', fn($row) => '
                 <a href="' . route('leader.suggestion.show', $row->Id_Suggestion) . '?source=not-sign&month=' . urlencode($monthInput ?? '') . '" class="btn btn-sm btn-primary">
                     <span class="pc-micon"><i class="material-icons-two-tone text-white">edit</i></span>
@@ -1735,7 +1720,7 @@ class LeaderSuggestionController extends Controller
         $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth();
 
         // Total jam perbaikan
-        $totalJam = (float) Suggestion::whereNotNull('Id_User')
+        $totalJam = Suggestion::whereNotNull('Id_User')
             ->whereBetween('Date_First_Suggestion', [$startDate, $endDate])
             ->sum('Hour_Suggestion');
 
@@ -1843,11 +1828,6 @@ class LeaderSuggestionController extends Controller
                 return $row->Acceptance_First_Suggestion !== null
                     ? str_pad($row->Acceptance_First_Suggestion, 5, '0', STR_PAD_LEFT)
                     : '';
-            })
-            ->editColumn('Hour_Suggestion', function ($row) {
-                return $row->Hour_Suggestion !== null && $row->Hour_Suggestion !== ''
-                    ? (float) $row->Hour_Suggestion
-                    : null;
             })
             ->make(true);
     }
@@ -2158,7 +2138,7 @@ class LeaderSuggestionController extends Controller
                 'saran'       => $saranPerMonth[$m] ?? 0,
                 'selesai'     => $selesaiPerMonth[$m] ?? 0,
                 'nilai_lebih5' => $nilaiLebih5PerMonth[$m],
-                'total_jam'   => isset($totalJamPerMonth[$m]) ? (float) $totalJamPerMonth[$m] : 0,
+                'total_jam'   => $totalJamPerMonth[$m] ?? 0,
             ];
         }
 

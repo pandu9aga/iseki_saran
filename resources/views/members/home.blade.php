@@ -223,14 +223,7 @@ $(document).ready(function () {
             { data: 'user_name', name: 'users.Name_User' },
             { data: 'Status_Suggestion', name: 'Status_Suggestion' },
             { data: 'Theme_Suggestion', name: 'Theme_Suggestion' },
-            { 
-                data: 'Hour_Suggestion', 
-                name: 'Hour_Suggestion',
-                render: function(data, type, row) {
-                    if (data === null || data === '' || data === undefined) return '';
-                    return parseFloat(data) + ' jam';
-                }
-            },
+            { data: 'Hour_Suggestion', name: 'Hour_Suggestion' },
             { data: 'Acceptance_First_Suggestion', name: 'Acceptance_First_Suggestion' },
             { data: 'Date_Last_Suggestion', name: 'Date_Last_Suggestion' },
             { data: 'Acceptance_Last_Suggestion', name: 'Acceptance_Last_Suggestion' },

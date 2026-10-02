@@ -280,9 +280,9 @@
                                     <div class="d-flex align-items-center gap-2">
                                         <input type="number" name="Hour_Suggestion" 
                                             class="form-control form-control-sm" 
-                                            value="{{ $suggestion->Hour_Suggestion !== null && $suggestion->Hour_Suggestion !== '' ? (float)$suggestion->Hour_Suggestion : '' }}" 
+                                            value="{{ $suggestion->Hour_Suggestion ?? '' }}" 
                                             placeholder="Masukkan jam" 
-                                            min="0" step="any"
+                                            min="0" step="0.5"
                                             style="max-width: 120px;">
                                         <span class="text-muted">jam</span>
                                     </div>
