@@ -144,8 +144,8 @@
                         name: 'Hour_Suggestion',
                         className: 'text-center',
                         render: function(data, type, row) {
-                            if (data === null || data === '') return '';
-                            return data + ' jam';
+                            if (data === null || data === '' || data === undefined) return '';
+                            return parseFloat(data) + ' jam';
                         }
                     },
                     {

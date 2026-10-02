@@ -180,6 +180,11 @@ class SuggestionController extends Controller
                     ? str_pad($row->Acceptance_Last_Suggestion, 5, '0', STR_PAD_LEFT)
                     : '';
             })
+            ->editColumn('Hour_Suggestion', function ($row) {
+                return $row->Hour_Suggestion !== null && $row->Hour_Suggestion !== ''
+                    ? (float) $row->Hour_Suggestion
+                    : null;
+            })
             ->addColumn('action', function ($row) {
                 return '
                     <a href="'.route('suggestion.show', $row->Id_Suggestion).'" class="btn btn-sm btn-primary">
