@@ -1286,19 +1286,15 @@ class LeaderSuggestionController extends Controller
         // Simpan ke database — ini yang harus cepat
         $suggestion->save();
 
-        // ─── Generate PDF sinkron via LibreOffice Portable ───
-        // PDF dirender secara sinkron memanggil LibreOffice
-        // jadi setelah save selesai PDF sudah ada dan badge
-        // di modal Export PDF langsung hijau. Save tetap tidak gagal walau
-        // PDF bermasalah — cukup dicatat di log.
+        // ─── Generate PDF asinkron via LibreOffice Portable ───
+        // PDF dirender di background menggunakan Job supaya save cepat.
         $pdfReady = false;
         if ($request->input('generate_pdf') && $suggestion->Acceptance_First_Suggestion && $suggestion->Date_First_Suggestion) {
             try {
                 $pdfService = app(SuggestionPdfService::class);
-                $pdfPath    = $pdfService->generate((int) $id);
-                $pdfReady   = !empty($pdfPath) && file_exists($pdfPath);
+                $pdfService->dispatchBackground((int) $id);
             } catch (\Exception $e) {
-                \Log::error('saveAll gagal generate PDF (ID ' . $id . '): ' . $e->getMessage());
+                \Log::error('saveAll gagal dispatch PDF (ID ' . $id . '): ' . $e->getMessage());
             }
         }
 
