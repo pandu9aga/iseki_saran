@@ -21,7 +21,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::post('/internal/generate-pdf/{id}', [\App\Http\Controllers\Leader\LeaderSuggestionController::class, 'generatePdfInternal']);
+Route::middleware(\App\Http\Middleware\LeaderMiddleware::class)->post('/internal/generate-pdf/{id}', [\App\Http\Controllers\Leader\LeaderSuggestionController::class, 'generatePdfInternal']);
 Route::get('/suggestions-data', [SuggestionController::class, 'getSuggestions'])->name('suggestions.data');
 
 
