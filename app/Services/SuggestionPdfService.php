@@ -307,10 +307,20 @@ class SuggestionPdfService
     public function dispatchBackground(int $id): bool
     {
         try {
-            GeneratePdfJob::dispatch($id);
+            // Karena pengguna XAMPP tidak memiliki Queue Worker yang selalu berjalan (daemon),
+            // kita menggunakan eksekusi asinkron bawaan sistem operasi.
+            $artisan = base_path('artisan');
+            $command = "php \"{$artisan}\" suggestion:generate-pdf {$id}";
+
+            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                pclose(popen("start /B " . $command, "r"));
+            } else {
+                exec($command . " > /dev/null 2>&1 &");
+            }
+
             return true;
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning('Gagal dispatch GeneratePdfJob (ID ' . $id . '): ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::warning('Gagal dispatch GeneratePdf (ID ' . $id . '): ' . $e->getMessage());
             return false;
         }
     }
