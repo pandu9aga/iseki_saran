@@ -19,6 +19,12 @@ Route::post('/login/member', [MainController::class, 'login_member'])->name('log
 Route::get('/logout', [MainController::class, 'logout'])->name('logout');
 Route::get('/logout_member', [MainController::class, 'logout_member'])->name('logout.member');
 
+// Route internal untuk generate PDF di background, diamankan dengan APP_KEY sebagai secret
+Route::post('/internal/generate-pdf/{id}', [\App\Http\Controllers\Leader\LeaderSuggestionController::class, 'generatePdfInternal'])
+    ->middleware('internal.secret')
+    ->name('internal.generate.pdf');
+
+
 Route::middleware(LeaderMiddleware::class)->group(function () {
     Route::get('/dashboard', [LeaderController::class, 'index'])->name('dashboard');
 

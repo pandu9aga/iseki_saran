@@ -17,7 +17,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'internal.secret' => \App\Http\Middleware\InternalSecretMiddleware::class,
+        ]);
+        $middleware->validateCsrfTokens(except: [
+            'internal/generate-pdf/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -298,29 +298,67 @@ class SuggestionPdfService
     }
 
     /**
-     * Dispatch konversi PDF ke queue (non-blocking).
-     * Save akan langsung selesai, PDF dibuat oleh queue worker.
+     * Trigger konversi PDF secara non-blocking melalui HTTP fire-and-forget
+     * ke route internal /api/internal/generate-pdf/{id}.
+     *
+     * Cara kerjanya: buka koneksi TCP ke server sendiri, kirim HTTP request,
+     * lalu langsung tutup socket tanpa menunggu response. Server (Apache/PHP)
+     * yang menerima request tersebut akan tetap melanjutkan proses generate PDF
+     * berkat ignore_user_abort(true) di generatePdfInternal().
+     *
+     * Pendekatan ini tidak butuh Queue Worker dan bekerja di XAMPP maupun server production.
      *
      * @param int $id
-     * @return bool true jika berhasil diantrekan ke queue
+     * @return bool true jika berhasil mengirim trigger
      */
     public function dispatchBackground(int $id): bool
     {
         try {
-            // Karena pengguna XAMPP tidak memiliki Queue Worker yang selalu berjalan (daemon),
-            // kita menggunakan eksekusi asinkron bawaan sistem operasi.
-            $artisan = base_path('artisan');
-            $command = "php \"{$artisan}\" suggestion:generate-pdf {$id}";
+            $secret   = config('app.key');
+            $appUrl   = rtrim(config('app.url'), '/');
+            $fullUrl  = $appUrl . '/generate_pdf_worker.php';
+            $postBody = http_build_query(['id' => $id, '_secret' => $secret]);
 
-            if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-                pclose(popen("start /B " . $command, "r"));
+            $parsed = parse_url($fullUrl);
+            $host   = $parsed['host'];
+            $port   = $parsed['port'] ?? (($parsed['scheme'] ?? 'http') === 'https' ? 443 : 80);
+            $path   = $parsed['path'];
+
+            // Fire-and-forget via TCP socket ke generate_pdf_worker.php
+            // Script worker di sana yang handle ignore_user_abort + fastcgi_finish_request
+            $httpRequest  = "POST {$path} HTTP/1.1\r\n";
+            $httpRequest .= "Host: {$host}\r\n";
+            $httpRequest .= "Content-Type: application/x-www-form-urlencoded\r\n";
+            $httpRequest .= "Content-Length: " . strlen($postBody) . "\r\n";
+            $httpRequest .= "Connection: close\r\n";
+            $httpRequest .= "\r\n";
+            $httpRequest .= $postBody;
+
+            $errno  = 0;
+            $errstr = '';
+            $socket = @fsockopen($host, $port, $errno, $errstr, 3);
+
+            if ($socket) {
+                fwrite($socket, $httpRequest);
+                fclose($socket); // langsung tutup tanpa baca response
             } else {
-                exec($command . " > /dev/null 2>&1 &");
+                // Fallback: curl dengan timeout sangat kecil agar tidak blocking
+                $ch = curl_init($fullUrl);
+                curl_setopt_array($ch, [
+                    CURLOPT_POST           => true,
+                    CURLOPT_POSTFIELDS     => $postBody,
+                    CURLOPT_RETURNTRANSFER => false,
+                    CURLOPT_TIMEOUT_MS     => 500,
+                    CURLOPT_CONNECTTIMEOUT => 3,
+                    CURLOPT_HTTPHEADER     => ['Content-Type: application/x-www-form-urlencoded'],
+                ]);
+                @curl_exec($ch);
+                curl_close($ch);
             }
 
             return true;
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning('Gagal dispatch GeneratePdf (ID ' . $id . '): ' . $e->getMessage());
+            Log::warning('Gagal dispatch GeneratePdf background (ID ' . $id . '): ' . $e->getMessage());
             return false;
         }
     }
