@@ -61,8 +61,6 @@ class SuggestionPdfService
         $sheet->setCellValue('AF38', $suggestion->Comment_Suggestion ?? '');
         $sheet->setCellValue('BC39', $suggestion->user->Name_User ?? '');
 
-        $tmpFiles = [];
-
         // ===============================
         // LINGKARAN TEMA (pink)
         // ===============================
@@ -91,12 +89,11 @@ class SuggestionPdfService
         }
 
         if ($targetCell && function_exists('imagecreatetruecolor')) {
-            $tmpFile = $this->createCircleImage(255, 0, 151, $suggestion->Id_Suggestion, 'theme');
-            $tmpFiles[] = $tmpFile;
+            $circleFile = $this->getCircleImagePath(255, 0, 151, 'theme');
 
             $drawing = new Drawing();
             $drawing->setName('ThemeCircle');
-            $drawing->setPath($tmpFile);
+            $drawing->setPath($circleFile);
             $drawing->setCoordinates($targetCell);
             $specialCells = ['C8', 'E8', 'G8', 'I8', 'K8', 'M8'];
             if (in_array($targetCell, $specialCells)) {
@@ -122,12 +119,11 @@ class SuggestionPdfService
         }
 
         if ($statusCell && function_exists('imagecreatetruecolor')) {
-            $tmpFile = $this->createCircleImage(212, 109, 0, $suggestion->Id_Suggestion, 'status');
-            $tmpFiles[] = $tmpFile;
+            $circleFile = $this->getCircleImagePath(212, 109, 0, 'status');
 
             $drawing = new Drawing();
             $drawing->setName('StatusCircle');
-            $drawing->setPath($tmpFile);
+            $drawing->setPath($circleFile);
             $drawing->setCoordinates($statusCell);
             $drawing->setOffsetX(-2);
             $drawing->setOffsetY(5);
@@ -150,12 +146,11 @@ class SuggestionPdfService
             $scoreCell = $scoreMap[$suggestion->Score_A_Suggestion];
 
             if (function_exists('imagecreatetruecolor')) {
-                $tmpFile = $this->createCircleImage(0, 0, 0, $suggestion->Id_Suggestion, 'scoreA');
-                $tmpFiles[] = $tmpFile;
+                $circleFile = $this->getCircleImagePath(0, 0, 0, 'scoreA');
 
                 $drawing = new Drawing();
                 $drawing->setName('ScoreCircle');
-                $drawing->setPath($tmpFile);
+                $drawing->setPath($circleFile);
                 $drawing->setCoordinates($scoreCell);
                 $drawing->setOffsetX($suggestion->Score_A_Suggestion <= 7 ? 0 : 15);
                 $drawing->setOffsetY(-2);
@@ -182,12 +177,11 @@ class SuggestionPdfService
                     if (isset($scoreB[$key])) {
                         $val = (int) $scoreB[$key];
                         if (isset($map[$val]) && function_exists('imagecreatetruecolor')) {
-                            $tmpFile = $this->createCircleImage(0, 0, 0, $suggestion->Id_Suggestion . '_' . $key, 'scoreB');
-                            $tmpFiles[] = $tmpFile;
+                            $circleFile = $this->getCircleImagePath(0, 0, 0, 'scoreB');
 
                             $drawing = new Drawing();
                             $drawing->setName('ScoreB_' . $key);
-                            $drawing->setPath($tmpFile);
+                            $drawing->setPath($circleFile);
                             $drawing->setCoordinates($map[$val]);
                             $drawing->setOffsetX(0);
                             $drawing->setOffsetY(-2);
@@ -268,22 +262,20 @@ class SuggestionPdfService
         $spreadsheet->disconnectWorksheets();
         unset($spreadsheet);
 
-        // Hapus temp image files (lingkaran)
-        foreach ($tmpFiles as $f) {
-            if (file_exists($f)) @unlink($f);
-        }
-
         if (!file_exists($tempPdf) || filesize($tempPdf) === 0) {
             @unlink($tempPdf);
             throw new \Exception('Gagal menghasilkan PDF via Mpdf (file kosong).');
         }
 
-        // Pindahkan ke path final (overwrite)
+        // Pindahkan ke path final (overwrite) secara aman di Windows
         if (file_exists($path)) {
-            unlink($path);
+            @unlink($path);
         }
 
-        rename($tempPdf, $path);
+        if (!@rename($tempPdf, $path)) {
+            copy($tempPdf, $path);
+            @unlink($tempPdf);
+        }
 
         Log::info("PDF berhasil dibuat: {$path}");
 
@@ -312,8 +304,20 @@ class SuggestionPdfService
     // PRIVATE HELPERS
     // ===============================
 
-    private function createCircleImage(int $r, int $g, int $b, $suffix, string $type = 'circle'): string
+    /**
+     * Dapatkan path asset lingkaran statis (dibuat & di-cache sekali, digunakan selamanya).
+     */
+    private function getCircleImagePath(int $r, int $g, int $b, string $type = 'circle'): string
     {
+        $dir = storage_path('app/pdf_assets');
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0777, true);
+        }
+        $file = $dir . "/circle_{$type}_{$r}_{$g}_{$b}.png";
+        if (file_exists($file) && filesize($file) > 0) {
+            return $file;
+        }
+
         $size      = 80;
         $thickness = 10;
         $img       = imagecreatetruecolor($size, $size);
@@ -326,11 +330,93 @@ class SuggestionPdfService
         $margin = $thickness + 6;
         imageellipse($img, $size / 2, $size / 2, $size - $margin, $size - $margin, $color);
 
-        $tmpFile = sys_get_temp_dir() . "/circle_{$type}_{$suffix}.png";
-        imagepng($img, $tmpFile);
+        imagepng($img, $file);
         imagedestroy($img);
 
-        return $tmpFile;
+        return $file;
+    }
+
+    /**
+     * Optimasi ukuran foto untuk PDF:
+     * - Downscale foto resolusi tinggi ke dimensi ideal cetak (max 900x650 px).
+     * - Menjaga orientasi EXIF (kamera smartphone).
+     * - Cache hasil optimasi sehingga proses berikutnya instan (0.001 detik).
+     */
+    private function getOptimizedPhotoPath(string $sourcePath): string
+    {
+        if (!file_exists($sourcePath)) {
+            return $sourcePath;
+        }
+
+        $info = @getimagesize($sourcePath);
+        if (!$info) {
+            return $sourcePath;
+        }
+
+        [$origW, $origH, $type] = $info;
+
+        // Jika resolusi dan file sudah kecil, gunakan langsung
+        $maxW = 900;
+        $maxH = 650;
+        if ($origW <= $maxW && $origH <= $maxH && filesize($sourcePath) <= 250 * 1024) {
+            return $sourcePath;
+        }
+
+        $cacheDir = storage_path('app/cache_pdf_photos');
+        if (!is_dir($cacheDir)) {
+            @mkdir($cacheDir, 0777, true);
+        }
+        $cacheFile = $cacheDir . '/' . md5($sourcePath . '_' . filemtime($sourcePath)) . '.jpg';
+        if (file_exists($cacheFile) && filesize($cacheFile) > 0) {
+            return $cacheFile;
+        }
+
+        $ratio = min($maxW / $origW, $maxH / $origH, 1.0);
+        $newW = (int) round($origW * $ratio);
+        $newH = (int) round($origH * $ratio);
+
+        $src = match ($type) {
+            IMAGETYPE_JPEG => @imagecreatefromjpeg($sourcePath),
+            IMAGETYPE_PNG  => @imagecreatefrompng($sourcePath),
+            IMAGETYPE_WEBP => @imagecreatefromwebp($sourcePath),
+            default        => null,
+        };
+
+        if (!$src) {
+            return $sourcePath;
+        }
+
+        // Koreksi orientasi EXIF jika ada (foto kamera HP)
+        if ($type === IMAGETYPE_JPEG && function_exists('exif_read_data')) {
+            $exif = @exif_read_data($sourcePath);
+            if (!empty($exif['Orientation'])) {
+                switch ($exif['Orientation']) {
+                    case 3:
+                        $src = imagerotate($src, 180, 0);
+                        break;
+                    case 6:
+                        $src = imagerotate($src, -90, 0);
+                        [$newW, $newH] = [$newH, $newW];
+                        break;
+                    case 8:
+                        $src = imagerotate($src, 90, 0);
+                        [$newW, $newH] = [$newH, $newW];
+                        break;
+                }
+            }
+        }
+
+        $dst = imagecreatetruecolor($newW, $newH);
+        $white = imagecolorallocate($dst, 255, 255, 255);
+        imagefilledrectangle($dst, 0, 0, $newW, $newH, $white);
+
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $newW, $newH, imagesx($src), imagesy($src));
+        imagedestroy($src);
+
+        imagejpeg($dst, $cacheFile, 82);
+        imagedestroy($dst);
+
+        return $cacheFile;
     }
 
     private function attachPhotos($sheet, $suggestion): void
@@ -343,9 +429,10 @@ class SuggestionPdfService
                     $filePath = public_path('uploads/contents/' . $photoName);
                     $cell     = $i == 0 ? 'B19' : ($i == 1 ? 'B24' : null);
                     if ($cell && !empty($photoName) && file_exists($filePath)) {
+                        $optPath = $this->getOptimizedPhotoPath($filePath);
                         $drawing = new Drawing();
                         $drawing->setName('ContentPhoto' . ($i + 1));
-                        $drawing->setPath($filePath);
+                        $drawing->setPath($optPath);
                         $drawing->setCoordinates($cell);
                         $drawing->setOffsetX(200);
                         $drawing->setOffsetY(20);
@@ -364,9 +451,10 @@ class SuggestionPdfService
                     $filePath = public_path('uploads/improvements/' . $photoName);
                     $cell     = $i == 0 ? 'AG19' : ($i == 1 ? 'AG24' : null);
                     if ($cell && !empty($photoName) && file_exists($filePath)) {
+                        $optPath = $this->getOptimizedPhotoPath($filePath);
                         $drawing = new Drawing();
                         $drawing->setName('ImprovementPhoto' . ($i + 1));
-                        $drawing->setPath($filePath);
+                        $drawing->setPath($optPath);
                         $drawing->setCoordinates($cell);
                         $drawing->setOffsetX(200);
                         $drawing->setOffsetY(20);
