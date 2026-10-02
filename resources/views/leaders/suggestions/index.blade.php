@@ -100,6 +100,9 @@
                                 <button type="button" id="btnRefreshPdfList" class="btn btn-sm btn-outline-primary">
                                     <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">refresh</i> Refresh
                                 </button>
+                                <button type="button" id="btnRegenerateAllPdf" class="btn btn-sm btn-outline-warning">
+                                    <i class="material-icons-two-tone" style="font-size:16px;vertical-align:middle;">autorenew</i> Generate Ulang Semua
+                                </button>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
                         </div>
@@ -651,6 +654,41 @@
             pdfPollAttempts = 0;
             if (pdfPollTimer) clearTimeout(pdfPollTimer);
             loadPdfList(true);
+        });
+
+        $('#btnRegenerateAllPdf').on('click', function () {
+            const month = $('#monthFilter').val();
+            if (!month) return;
+
+            if (!confirm('Apakah Anda yakin ingin men-generate ulang semua PDF di bulan ' + month + '? File PDF yang lama akan ditimpa dan proses ini berjalan di background.')) {
+                return;
+            }
+
+            const btn = $(this);
+            const originalText = btn.html();
+            btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Memproses...').prop('disabled', true);
+
+            $.ajax({
+                url: "{{ route('leader.suggestion.regenerateAllPdf') }}",
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    Month: month
+                },
+                success: function (res) {
+                    btn.html(originalText).prop('disabled', false);
+                    if (res.success) {
+                        alert(res.message);
+                        $('#btnRefreshPdfList').trigger('click');
+                    } else {
+                        alert('Gagal: ' + res.message);
+                    }
+                },
+                error: function () {
+                    btn.html(originalText).prop('disabled', false);
+                    alert('Terjadi kesalahan saat memanggil server.');
+                }
+            });
         });
 
         $('#modalExportPdfAll').on('hidden.bs.modal', function () {
