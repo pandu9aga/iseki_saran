@@ -1305,32 +1305,6 @@ class LeaderSuggestionController extends Controller
         ]);
     }
 
-    public function regenerateAllPdf(Request $request)
-    {
-        $bulan = $request->get('Month');
-        if (!$bulan) {
-            return response()->json(['success' => false, 'message' => 'Bulan tidak valid.']);
-        }
-
-        $suggestions = Suggestion::whereNotNull('Acceptance_First_Suggestion')
-            ->where('Acceptance_First_Suggestion', '>', 0)
-            ->whereRaw("DATE_FORMAT(Date_First_Suggestion, '%Y-%m') = ?", [$bulan])
-            ->get();
-
-        $pdfService = app(\App\Services\SuggestionPdfService::class);
-        $count = 0;
-        foreach ($suggestions as $suggestion) {
-            if ($pdfService->dispatchBackground($suggestion->Id_Suggestion)) {
-                $count++;
-            }
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => "Proses generate ulang untuk {$count} PDF sedang berjalan di background.",
-        ]);
-    }
-
     public function exportAllPdf(Request $request)
     {
         $bulan = $request->get('Month'); // format Y-m
